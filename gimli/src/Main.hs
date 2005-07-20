@@ -2,10 +2,13 @@
 
 module Main (main) where
 
+import Control.Exception
 import Control.Monad.Cont
 import Control.Monad.State
+import Data.Maybe
 
 import qualified System.Console.SimpleLineEditor as LE
+import qualified System.Posix.Terminal as Terminal
 
 import qualified Version as Version
 import qualified Name as Name
@@ -14,9 +17,10 @@ import qualified Name as Name
 -- Main entry point
 
 main = do
-    welcome
-    enterRepl
-    putStrLn "Exiting."
+    term <- Terminal.queryTerminal 0
+    when term welcome
+    enterRepl $ ReplState { stExit = undefined, stTerminal = term }
+    when term $ putStrLn "Exiting."
 
 welcome =
     putStrLn . unlines $
@@ -34,6 +38,7 @@ type ReplCtx r = ContT r (StateT (ReplState r ()) IO) ()
 
 data ReplState r a =
     ReplState { stExit :: a -> ContT r (StateT (ReplState r a) IO) a
+              , stTerminal :: Bool
               }
 
 exit val =
@@ -42,21 +47,17 @@ exit val =
 
 -- Read-Eval-Print Loop
 
-enterRepl :: IO ()
-enterRepl =
-    (`evalStateT` ReplState undefined) . (`runContT` return) $ do
-        liftIO LE.initialise
+enterRepl :: ReplState () () -> IO ()
+enterRepl s0 = do
+    (`evalStateT` s0) . (`runContT` return) $ do
+        initializeTerminal
         callCC $ \exitCont -> do
             modify $ \s -> s { stExit = exitCont }
             repl
 
-repl :: ReplCtx r
-repl = do
-    input <- liftIO $ LE.getLineEdited "gimli> "
-    return ()
-    case input of
-        Just cmd -> eval cmd >> repl
-        _        -> return ()
+repl =
+    promptTerminal >>=
+    return () `maybe` \cmd -> eval cmd >> repl
 
 eval cmd@(':':_)
     | Just cmdFn <- lookup (head $ words cmd) sysCommands
@@ -78,3 +79,16 @@ sysQuit _ =
 sysHelp _ =
     liftIO . putStrLn . unlines $
     "Commands I know:" : map (("  " ++) . fst) sysCommands
+
+
+-- Terminal helpers
+
+initializeTerminal =
+    gets stTerminal >>= (`when` liftIO LE.initialise)
+
+promptTerminal = do
+    term <- gets stTerminal
+    liftIO $
+        handle (\_ -> return Nothing) $
+        if term then LE.getLineEdited "gimli> "
+        else getLine >>= return . Just
