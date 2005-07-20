@@ -4,16 +4,18 @@ module Main (main) where
 
 import Control.Monad.Cont
 import Control.Monad.State
+
 import qualified System.Console.SimpleLineEditor as LE
 
-import Version (version)
+import qualified Version as Version
+import qualified Name as Name
 
-data ReplMonad r a = ReplMonad {
-    rmExit :: a -> ContT r (StateT (ReplMonad r a) IO) a
+data ReplCtx r a = ReplCtx {
+    cxtExit :: a -> ContT r (StateT (ReplCtx r a) IO) a
 }
 
 exit val =
-    gets rmExit >>= ($ val)
+    gets cxtExit >>= ($ val)
 
 
 newtype C m b = C { runC :: C m b -> m b }
@@ -21,25 +23,23 @@ newtype C m b = C { runC :: C m b -> m b }
 main = do
     welcome
     enterRepl
+    putStrLn "Exiting."
 
 welcome =
     putStrLn . unlines $
     [ "      _       _ _"
-    , " __ _(_)_ __ | (_)"
-    , "/ _` | | '  \\| | |    " ++ name
-    , "\\__, |_|_|_|_|_|_|    Version " ++ version
+    , " __ _(_)_ __ | (_)    " ++ Name.name
+    , "/ _` | | '  \\| | |    Version " ++ Version.version
+    , "\\__, |_|_|_|_|_|_|    Enter :? for help."
     , "|___/"
     ]
 
-name =
-    "Genetics Information Manipulation Language Interface"
-
 enterRepl :: IO ()
 enterRepl =
-    (`evalStateT` undefined) . (`runContT` return) $ do
+    (`evalStateT` ReplCtx undefined) . (`runContT` return) $ do
         liftIO LE.initialise
-        callCC $ \exit -> do
-            put (ReplMonad exit)
+        callCC $ \exitCont -> do
+            modify $ \ctx -> ctx { cxtExit = exitCont }
             repl
         return ()
 
@@ -47,22 +47,25 @@ repl = do
     input <- liftIO $ LE.getLineEdited "gimli> "
     return ()
     case input of
-        Just cmd -> do
-            liftIO $ putStrLn $ "command = \"" ++ cmd ++ "\""
-            eval cmd
-            repl
-        _ -> return ()
+        Just cmd -> eval cmd >> repl
+        _        -> return ()
 
-eval (':':cmd)
-    | Just cmdFn <- lookup (':':cmd) sysCommands = cmdFn
+eval cmd@(':':_)
+    | Just cmdFn <- lookup (head $ words cmd) sysCommands
+    = cmdFn cmd
 eval cmd = do
-    liftIO $ putStrLn $ "Unknown command \"" ++ cmd ++ "\""
+    liftIO $ putStrLn $ "Unknown command \"" ++ cmd ++ "\"."
 
 
-sysCommands = 
+sysCommands =
     [ (":quit", sysQuit)
+    , (":?",    sysHelp)
     ]
 
-sysQuit =
+sysQuit _ =
     exit ()
+
+sysHelp _ =
+    liftIO . putStrLn . unlines $
+    "Commands I know:" : map (("  " ++) . fst) sysCommands
 
