@@ -1,0 +1,99 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+smoke - run checkout-build-and-smoke tests continuously
+
+=head1 SYNOPSIS
+
+B<smoke> I<darcs-repository>
+
+=head1 DESCRIPTION
+
+This program can be used for continuous build- and smoke testing.
+It checks out the most-recent sources from the given Darcs repository
+and then runs "make test" on the sources.  After ten minutes, it
+repeats the process, continuing until interrupted.
+
+As an optimization, the program will checksum the sources and
+re-run smoke tests only when the sources have changed.
+
+=head1 AUTHOR
+
+Tom Moertel (tom@moertel.com)
+
+=cut
+
+use warnings;
+use strict;
+use sigtrap qw(die normal-signals);
+
+use File::Temp 'tempdir';
+
+unless (@ARGV) {
+    print STDERR "Usage: smoke <darcs-repository>\n",
+                 "Ex.:   smoke darcs.moertel.com:projects/gimli\n";
+    exit 1;
+}
+
+
+my $tempdir = tempdir();
+my $checksum = "";
+
+# create temp directory to work in
+
+chdir $tempdir or die "cannot chdir to $tempdir: $!";
+print STDERR "working out of $tempdir\n";
+
+# enter checkout-build-and-smoke loop
+
+for (;;) {
+
+    # pull most-recent sources to the dl/ directory via darcs
+
+    sysrun([qw(rm -rf dl)]);
+    mkdir "dl" or die "cannot make dl dir: $!";
+    chdir "dl" or die "cannot chdir to dl dir: $!";
+    sysrun([qw(darcs get), @ARGV]);
+    chdir ".." or die "cannot chdir back to $tempdir: $!";
+    
+    # checksum the most-recent sources
+    
+    my $new_checksum = `find dl -type f -print0 | xargs -0 md5sum | md5sum`;
+    print STDERR "checksum = $new_checksum\n";
+    
+    # if the checksum has changed, run the smoke tests
+
+    if ($new_checksum ne $checksum) {
+        $checksum = $new_checksum;
+        print STDERR "sources have changed; running smoke test\n";
+        run_smoketest();
+    }
+    
+    sleep 600;  # sleep for ten minutes
+    
+}
+
+sub sysrun {
+    my $cmd = shift;
+    print STDERR "+ @$cmd\n";
+    system(@$cmd) == 0
+        or die "system (@$cmd) failed: $?";
+}
+
+
+sub run_smoketest {
+    sysrun([qw(rm -rf build)]);
+    sysrun([qw(mkdir build)]);
+    sysrun(["tar cf - -C dl . | tar xf - -C build"]);
+    sysrun(["cd build/gimli-root/gimli && make test"]);
+}
+
+
+END {
+    if ($tempdir and -d $tempdir) {
+        print STDERR "Cleaning up...\n";
+        sysrun([qw(rm -rf), $tempdir]);
+        print STDERR "Exiting.\n";
+    }
+}
