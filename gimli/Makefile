@@ -1,8 +1,16 @@
+# Makefile
+
+app_dir = app
+src_dir = src
+
+hsfiles := $(wildcard $(src_dir)/*.hs)
+
 gimli_packages = -package readline
 
-hsfiles := $(wildcard src/*.hs)
 
-all : app/gimli
+# targets
 
-app/gimli : $(hsfiles)
-	ghc -isrc --make -o $@ $(gimli_packages) src/Main.hs
+all : $(app_dir)/gimli
+
+$(app_dir)/gimli : $(hsfiles)
+	ghc -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
