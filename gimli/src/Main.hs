@@ -10,15 +10,12 @@ import qualified System.Console.SimpleLineEditor as LE
 import qualified Version as Version
 import qualified Name as Name
 
-data ReplCtx r a = ReplCtx {
-    cxtExit :: a -> ContT r (StateT (ReplCtx r a) IO) a
-}
+data ReplCtx r a =
+    ReplCtx { cxtExit :: a -> ContT r (StateT (ReplCtx r a) IO) a
+            }
 
 exit val =
     gets cxtExit >>= ($ val)
-
-
-newtype C m b = C { runC :: C m b -> m b }
 
 main = do
     welcome
@@ -41,7 +38,6 @@ enterRepl =
         callCC $ \exitCont -> do
             modify $ \ctx -> ctx { cxtExit = exitCont }
             repl
-        return ()
 
 repl = do
     input <- liftIO $ LE.getLineEdited "gimli> "
