@@ -14,3 +14,12 @@ all : $(app_dir)/gimli
 
 $(app_dir)/gimli : $(hsfiles)
 	ghc -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
+
+.PHONY: test sanity
+test :
+	prove test/*.t
+
+sanity:
+	prove test/sanity.t
+
+
