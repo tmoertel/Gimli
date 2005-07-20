@@ -16,9 +16,12 @@ all : $(app_dir)/gimli
 $(app_dir)/gimli : $(hsfiles)
 	ghc -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
 
-.PHONY: test sanity
-test : all
+.PHONY: test sanity smokeloop
+test: all
 	prove test/*.t
 
 sanity:
 	prove test/sanity.t
+
+smokeloop:
+	perl script/smoke bifur:work/darcs/gimli-root gimli-root/gimli

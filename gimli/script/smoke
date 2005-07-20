@@ -6,14 +6,15 @@ smoke - run checkout-build-and-smoke tests continuously
 
 =head1 SYNOPSIS
 
-B<smoke> I<darcs-repository>
+B<smoke> I<darcs-repository> I<test-root-dir>
 
 =head1 DESCRIPTION
 
-This program can be used for continuous build- and smoke testing.
-It checks out the most-recent sources from the given Darcs repository
-and then runs "make test" on the sources.  After ten minutes, it
-repeats the process, continuing until interrupted.
+This program can be used for continuous build- and smoke testing.  It
+checks out the most-recent sources from the given Darcs repository,
+chdirs into the given I<test-root-dir>, and then runs "make test".
+After ten minutes, it repeats the process, continuing until
+interrupted.
 
 As an optimization, the program will checksum the sources and
 re-run smoke tests only when the sources have changed.
@@ -32,22 +33,28 @@ use Digest::SHA1;
 use File::Find;
 use File::Temp 'tempdir';
 
-unless (@ARGV) {
-    print STDERR "Usage: smoke <darcs-repository>\n",
-                 "Ex.:   smoke darcs.moertel.com:projects/gimli\n";
+
+# check the command-line arguments
+
+unless (@ARGV == 2) {
+    print STDERR "Usage: smoke <darcs-repository> <test-root-dir>\n",
+                 "Ex.:   smoke darcs.moertel.com:projects/gimli gimli\n";
     exit 1;
 }
+my ($repo, $test_root) = @ARGV;
 
 
-my $tempdir = tempdir();
-my $checksum = "";
 
 # create temp directory to work in
 
+my $tempdir = tempdir();
 chdir $tempdir or die "cannot chdir to $tempdir: $!";
 print STDERR "working out of $tempdir\n";
 
+
 # enter checkout-build-and-smoke loop
+
+my $checksum = "";
 
 for (;;) {
 
@@ -56,7 +63,7 @@ for (;;) {
     sysrun([qw(rm -rf dl)]);
     mkdir "dl" or die "cannot make dl dir: $!";
     chdir "dl" or die "cannot chdir to dl dir: $!";
-    sysrun([qw(darcs get), @ARGV]);
+    sysrun([qw(darcs get), $repo]);
     chdir ".." or die "cannot chdir back to $tempdir: $!";
     
     # checksum the most-recent sources
@@ -78,21 +85,27 @@ for (;;) {
     
 }
 
-sub sysrun {
-    my $cmd = shift;
-    print STDERR "+ @$cmd\n";
-    system(@$cmd) == 0
-        or die "system (@$cmd) failed: $?";
-}
-
-
 sub run_smoketest {
     sysrun([qw(rm -rf build)]);
     sysrun([qw(mkdir build)]);
     sysrun(["tar cf - -C dl . | tar xf - -C build"]);
-    sysrun(["cd build/gimli-root/gimli && make test"]);
+    my $trial = eval { sysrun(["cd build/$test_root && make test"]) };
+    my $msg   = $trial ? "SUCCESS" : "FAILURE";
+    print STDERR "### $msg ###\n";
 }
 
+# cleanup code
+
+END {
+    if ($tempdir and -d $tempdir) {
+        print STDERR "Cleaning up...\n";
+        sysrun([qw(rm -rf), $tempdir]);
+        print STDERR "Exiting.\n";
+    }
+}
+
+
+# read a file in one big slurp
 
 sub slurp {
     my $file = shift;
@@ -102,10 +115,11 @@ sub slurp {
     return $contents;
 }
 
-END {
-    if ($tempdir and -d $tempdir) {
-        print STDERR "Cleaning up...\n";
-        sysrun([qw(rm -rf), $tempdir]);
-        print STDERR "Exiting.\n";
-    }
+# run the given command via system
+
+sub sysrun {
+    my $cmd = shift;
+    print STDERR "+ @$cmd\n";
+    system(@$cmd) == 0
+        or die "system (@$cmd) failed: $?";
 }
