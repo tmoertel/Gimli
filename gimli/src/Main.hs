@@ -10,12 +10,8 @@ import qualified System.Console.SimpleLineEditor as LE
 import qualified Version as Version
 import qualified Name as Name
 
-data ReplCtx r a =
-    ReplCtx { cxtExit :: a -> ContT r (StateT (ReplCtx r a) IO) a
-            }
 
-exit val =
-    gets cxtExit >>= ($ val)
+-- Main entry point
 
 main = do
     welcome
@@ -31,14 +27,30 @@ welcome =
     , "|___/"
     ]
 
+
+-- REPL monad
+
+type ReplCtx r = ContT r (StateT (ReplState r ()) IO) ()
+
+data ReplState r a =
+    ReplState { stExit :: a -> ContT r (StateT (ReplState r a) IO) a
+              }
+
+exit val =
+    gets stExit >>= ($ val)
+
+
+-- Read-Eval-Print Loop
+
 enterRepl :: IO ()
 enterRepl =
-    (`evalStateT` ReplCtx undefined) . (`runContT` return) $ do
+    (`evalStateT` ReplState undefined) . (`runContT` return) $ do
         liftIO LE.initialise
         callCC $ \exitCont -> do
-            modify $ \ctx -> ctx { cxtExit = exitCont }
+            modify $ \s -> s { stExit = exitCont }
             repl
 
+repl :: ReplCtx r
 repl = do
     input <- liftIO $ LE.getLineEdited "gimli> "
     return ()
@@ -53,6 +65,8 @@ eval cmd = do
     liftIO $ putStrLn $ "Unknown command \"" ++ cmd ++ "\"."
 
 
+-- System commands
+
 sysCommands =
     [ (":quit", sysQuit)
     , (":?",    sysHelp)
@@ -64,4 +78,3 @@ sysQuit _ =
 sysHelp _ =
     liftIO . putStrLn . unlines $
     "Commands I know:" : map (("  " ++) . fst) sysCommands
-
