@@ -1,4 +1,4 @@
-# Makefile
+# GIMLI Makefile
 
 app_dir = app
 src_dir = src
@@ -10,10 +10,10 @@ gimli_packages = -package readline
 
 # targets
 
-all : $(app_dir)/gimli
+all: $(app_dir)/gimli
 .PHONY: all
 
-$(app_dir)/gimli : $(hsfiles)
+$(app_dir)/gimli: $(hsfiles)
 	ghc -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
 
 .PHONY: test sanity smokeloop
