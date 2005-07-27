@@ -19,7 +19,10 @@ expr =
 factor = parens expr <|> literalExpr <?> "simple expression"
 
 literalExpr =
-    integerLiteralExpr <|> stringLiteralExpr <|> boolLiteralExpr
+        integerLiteralExpr
+    <|> stringLiteralExpr
+    <|> boolLiteralExpr
+    <|> naLiteralExpr
 
 integerLiteralExpr =
     integer >>= return . EVal . VInt
@@ -32,6 +35,9 @@ boolLiteralExpr =
       <|>
       ( reservedWords "F FALSE" >> return False )
     ) >>= return . EVal . VBool
+
+naLiteralExpr =
+    reserved "NA" >> return (EVal VNa)
 
 reservedWords = choice . map reserved . words
 
@@ -54,16 +60,19 @@ opTable =
 
 cmpOp name op l r = EBinOp binop l r
   where
-    binop    = BinOp name opfn
+    binop    = BinOp name (propNa opfn)
     opfn a b = VBool $ a `op` b
 
 numOp name op l r = EBinOp binop l r
   where
-    binop    = BinOp name opfn
+    binop    = BinOp name (propNa opfn)
     opfn (VInt a) (VInt b) = VInt $ a `op` b
     opfn (VInt a) _        = VInt $ a `op` 0
     opfn _        (VInt b) = VInt $ 0 `op` b
 
+propNa _ VNa _   = VNa
+propNa _ _   VNa = VNa
+propNa f a   b   = f a b
 
 gimlLexer :: P.TokenParser ()
 gimlLexer =
@@ -72,7 +81,7 @@ gimlLexer =
       { commentStart    = "/*"
       , commentEnd      = "*/"
       , commentLine     = "#"
-      , reservedNames   = ["T", "TRUE", "F", "FALSE"]
+      , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA"]
       , reservedOpNames = ["*","/","+","-","==","!="]
       }
     )

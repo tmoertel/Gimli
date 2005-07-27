@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 39;
+use Test::More tests => 44;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -71,6 +71,14 @@ evals_ok( "9 / 3", 3 );
 evals_ok( "1 + T", 1 );
 evals_ok( "1 * T", 0 );
 evals_ok( '"4" * 1', 0 );
+
+# NAs
+
+evals_same_ok( "NA" );
+evals_ok( "(NA)", "NA" );
+evals_ok( "NA + 1", "NA" );
+evals_ok( "NA == NA", "NA" );
+evals_ok( "NA != NA", "NA" );
 
 
 #==============================================================================
