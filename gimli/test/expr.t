@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 29;
+use Test::More tests => 39;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -76,3 +76,19 @@ evals_ok( "((((((1))))))", 1 );
 evals_ok( "(((T)))", "TRUE" );
 evals_true_ok( "(FALSE==F) == T" );
 evals_true_ok( "FALSE == (F==T)" );
+
+# arithmetic expressions
+
+evals_ok( "1 + 1", 2 );
+evals_ok( "1 - 1", 0 );
+evals_ok( "1 * 3", 3 );
+evals_ok( "1 * -3", -3 );
+evals_ok( "1 + 2 * 3", 7 );
+evals_ok( "(1 + 2) * 3", 9 );
+evals_ok( "9 / 3", 3 );
+
+# promotion of non-numerics to zero in arithmetic expressions
+
+evals_ok( "1 + T", 1 );
+evals_ok( "1 * T", 0 );
+evals_ok( '"4" * 1', 0 );

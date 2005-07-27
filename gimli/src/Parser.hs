@@ -10,11 +10,7 @@ import qualified Text.ParserCombinators.Parsec.Token as P
 import Expr
 
 gimlParse =
-    parse gimlParser
-
-gimlParser :: Parser Expr
-gimlParser =
-    expr
+    parse expr
 
 expr :: Parser Expr
 expr =
@@ -40,7 +36,13 @@ boolLiteralExpr =
 reservedWords = choice . map reserved . words
 
 opTable =
-    [ [ op "==" (cmpOp "==" (==)) l
+    [ [ op "*" (numOp "*" (*)) l
+      , op "/" (numOp "/" (div)) l
+      ]
+    , [ op "+" (numOp "+" (+)) l
+      , op "-" (numOp "-" (-)) l
+      ]
+    , [ op "==" (cmpOp "==" (==)) l
       , op "!=" (cmpOp "!=" (/=)) l
       ]
     ]
@@ -54,6 +56,14 @@ cmpOp name op l r = EBinOp binop l r
   where
     binop    = BinOp name opfn
     opfn a b = VBool $ a `op` b
+
+numOp name op l r = EBinOp binop l r
+  where
+    binop    = BinOp name opfn
+    opfn (VInt a) (VInt b) = VInt $ a `op` b
+    opfn (VInt a) _        = VInt $ a `op` 0
+    opfn _        (VInt b) = VInt $ 0 `op` b
+
 
 gimlLexer :: P.TokenParser ()
 gimlLexer =
