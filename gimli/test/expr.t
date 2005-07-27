@@ -8,30 +8,9 @@ use Test::More tests => 39;
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
 
-sub evals_ok {
-    no warnings 'once';
-    my ($expr, $expected_result) = @_;
-    my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
-    my $result = run_gimli($expr);
-    for ($result) { s/^\s+//s; s/\s+$//s; }  # trim whitespace
-    $test_fn->($result, $expected_result, "$expr ==> $expected_result");
-}
-
-sub evals_same_ok {
-    my ($expr) = @_;
-    evals_ok($expr, $expr);
-}
-
-sub evals_true_ok {
-    my ($expr) = @_;
-    evals_ok($expr, "TRUE");
-}
-
-sub evals_false_ok {
-    my ($expr) = @_;
-    evals_ok($expr, "FALSE");
-}
-
+#==============================================================================
+# tests
+#==============================================================================
 
 # integer literals
 
@@ -56,7 +35,7 @@ evals_same_ok( "FALSE" );
 evals_ok( "T", "TRUE" );
 evals_ok( "F", "FALSE" );
 
-# comparisons
+# equality tests
 
 evals_true_ok( "T==T" );
 evals_true_ok( "T==TRUE" );
@@ -92,3 +71,32 @@ evals_ok( "9 / 3", 3 );
 evals_ok( "1 + T", 1 );
 evals_ok( "1 * T", 0 );
 evals_ok( '"4" * 1', 0 );
+
+
+#==============================================================================
+# helpers
+#==============================================================================
+
+sub evals_ok {
+    no warnings 'once';
+    my ($expr, $expected_result) = @_;
+    my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
+    my $result = run_gimli($expr);
+    for ($result) { s/^\s+//s; s/\s+$//s; }  # trim whitespace
+    $test_fn->($result, $expected_result, "$expr ==> $expected_result");
+}
+
+sub evals_same_ok {
+    my ($expr) = @_;
+    evals_ok($expr, $expr);
+}
+
+sub evals_true_ok {
+    my ($expr) = @_;
+    evals_ok($expr, "TRUE");
+}
+
+sub evals_false_ok {
+    my ($expr) = @_;
+    evals_ok($expr, "FALSE");
+}
