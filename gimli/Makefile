@@ -16,12 +16,24 @@ all: $(app_dir)/gimli
 $(app_dir)/gimli: $(hsfiles)
 	ghc -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
 
-.PHONY: test sanity smokeloop
+.PHONY: test sanity recent
 test: all
 	prove test/*.t
 
-sanity:
+sanity: all
 	prove test/sanity.t
 
+recent: all
+	prove `find test/ -name '*.t' -mmin -60`
+
+.PHONY: smokeloop
 smokeloop:
 	perl script/smoke bifur:work/darcs/gimli-root gimli-root/gimli
+
+.PHONY: wc
+wc:
+	find . -type f | egrep -v '/app/|~|.o$$|.hi$$' | xargs wc -l
+
+.PHONY: clean
+clean:
+	rm -f $(src_dir)/*.o $(src_dir)/*.hi $(app_dir)/gimli
