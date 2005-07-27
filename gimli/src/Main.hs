@@ -12,6 +12,9 @@ import qualified System.Posix.Terminal as Terminal
 
 import qualified Version as Version
 import qualified Name as Name
+import qualified Parser as Parser
+import qualified Eval as Eval
+import PPrint
 
 
 -- Main entry point
@@ -63,7 +66,9 @@ eval cmd@(':':_)
     | Just cmdFn <- lookup (head $ words cmd) sysCommands
     = cmdFn cmd
 eval cmd = do
-    liftIO $ putStrLn $ "Unknown command \"" ++ cmd ++ "\"."
+    liftIO $ case Parser.gimlParse "input" cmd of
+        Left err   -> putStrLn $ "error: " ++ show err
+        Right expr -> putStrLn . pp $ Eval.eval expr
 
 
 -- System commands

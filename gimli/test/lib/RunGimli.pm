@@ -1,13 +1,11 @@
 package RunGimli;
 
+use Exporter 'import';
 use File::Temp 'tempfile';
 
-sub import {
-    my $caller = caller;
-    { no strict 'refs';  *{$caller.'::run_gimli'} = \&run; }
-}
+our @EXPORT = (qw(run_gimli));
 
-sub run {
+sub run_gimli {
 
     my ($input) = @_;
 
@@ -35,5 +33,6 @@ sub run {
 
     return $results;
 }
+
 
 1;
