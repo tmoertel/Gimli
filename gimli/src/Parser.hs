@@ -75,14 +75,17 @@ runLex p input =
         eof
         return x
 
-whiteSpace = P.whiteSpace gimlLexer
-lexeme     = P.lexeme gimlLexer
-symbol     = P.symbol gimlLexer
-natural    = P.natural gimlLexer
-integer    = P.integer gimlLexer
-parens     = P.parens gimlLexer
-semi       = P.semi gimlLexer
-identifier = P.identifier gimlLexer
-reserved   = P.reserved gimlLexer
-reservedOp = P.reservedOp gimlLexer
-stringLiteral = P.stringLiteral gimlLexer
+whiteSpace    = glex P.whiteSpace
+lexeme        = glex P.lexeme
+symbol        = glex P.symbol
+natural       = glex P.natural
+integer       = glex P.integer
+parens        = glex P.parens
+semi          = glex P.semi
+identifier    = glex P.identifier
+reserved      = glex P.reserved
+reservedOp    = glex P.reservedOp
+stringLiteral = glex P.stringLiteral
+
+glex f = f gimlLexer
+
