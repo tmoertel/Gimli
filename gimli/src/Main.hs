@@ -65,6 +65,8 @@ repl =
 eval cmd@(':':_)
     | Just cmdFn <- lookup (head $ words cmd) sysCommands
     = cmdFn cmd
+    | otherwise
+    = liftIO . putStrLn $ "Unknown command: \"" ++ cmd ++ "\""
 eval cmd = do
     liftIO $ case Parser.gimlParse "input" cmd of
         Left err   -> putStrLn $ "error: " ++ show err
