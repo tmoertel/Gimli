@@ -15,9 +15,14 @@ gimlParser :: Parser Expr
 gimlParser =
     literal
 
-literal :: Parser Expr
-literal = do
+literal =
+    integerExpr <|> stringExpr
+
+integerExpr =
     integer >>= return . EVal . VInt
+
+stringExpr =
+    stringLiteral >>= return . EVal . VStr
 
 
 gimlLexer :: P.TokenParser ()
@@ -50,4 +55,4 @@ semi       = P.semi gimlLexer
 identifier = P.identifier gimlLexer
 reserved   = P.reserved gimlLexer
 reservedOp = P.reservedOp gimlLexer
-
+stringLiteral = P.stringLiteral gimlLexer

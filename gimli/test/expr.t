@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 10;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -22,7 +22,19 @@ sub evals_same_ok {
     evals_ok($expr, $expr);
 }
 
+# integers
+
 evals_same_ok( "1" );
 evals_same_ok( "1234" );
 evals_same_ok( "-1" );
 evals_same_ok( "-1234" );
+
+# strings
+
+evals_same_ok( '""' );
+evals_same_ok( '"foo"' );
+evals_same_ok( '"a\nb"' );
+evals_ok( '"\65"', '"A"' );    # dec escape
+evals_ok( '"\x41"', '"A"' );   # hex escape
+evals_ok( '"\o101"', '"A"' );  # oct escape
+
