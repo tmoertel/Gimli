@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 10;
+use Test::More tests => 29;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -14,7 +14,7 @@ sub evals_ok {
     my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
     my $result = run_gimli($expr);
     for ($result) { s/^\s+//s; s/\s+$//s; }  # trim whitespace
-    $test_fn->($result, $expected_result, "$expr ==> $result");
+    $test_fn->($result, $expected_result, "$expr ==> $expected_result");
 }
 
 sub evals_same_ok {
@@ -22,14 +22,25 @@ sub evals_same_ok {
     evals_ok($expr, $expr);
 }
 
-# integers
+sub evals_true_ok {
+    my ($expr) = @_;
+    evals_ok($expr, "TRUE");
+}
+
+sub evals_false_ok {
+    my ($expr) = @_;
+    evals_ok($expr, "FALSE");
+}
+
+
+# integer literals
 
 evals_same_ok( "1" );
 evals_same_ok( "1234" );
 evals_same_ok( "-1" );
 evals_same_ok( "-1234" );
 
-# strings
+# string literals
 
 evals_same_ok( '""' );
 evals_same_ok( '"foo"' );
@@ -38,3 +49,30 @@ evals_ok( '"\65"', '"A"' );    # dec escape
 evals_ok( '"\x41"', '"A"' );   # hex escape
 evals_ok( '"\o101"', '"A"' );  # oct escape
 
+# bool literals
+
+evals_same_ok( "TRUE" );
+evals_same_ok( "FALSE" );
+evals_ok( "T", "TRUE" );
+evals_ok( "F", "FALSE" );
+
+# comparisons
+
+evals_true_ok( "T==T" );
+evals_true_ok( "T==TRUE" );
+evals_true_ok( "F == F" );
+evals_true_ok( "F == FALSE" );
+evals_true_ok( "T != F" );
+evals_true_ok( "1 == 1" );
+evals_true_ok( "1 != 0" );
+evals_true_ok( '"hi" == "hi"' );
+evals_true_ok( '"hi" != "foo"' );
+evals_false_ok( '"hi" == 1' );
+evals_false_ok( 'T == 1' );
+
+# parens
+
+evals_ok( "((((((1))))))", 1 );
+evals_ok( "(((T)))", "TRUE" );
+evals_true_ok( "(FALSE==F) == T" );
+evals_true_ok( "FALSE == (F==T)" );

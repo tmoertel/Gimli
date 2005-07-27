@@ -3,6 +3,7 @@ module Parser (
 ) where
 
 import Text.ParserCombinators.Parsec
+import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as P
 
@@ -13,17 +14,46 @@ gimlParse =
 
 gimlParser :: Parser Expr
 gimlParser =
-    literal
+    expr
 
-literal =
-    integerExpr <|> stringExpr
+expr :: Parser Expr
+expr =
+    buildExpressionParser opTable factor
 
-integerExpr =
+factor = parens expr <|> literalExpr <?> "simple expression"
+
+literalExpr =
+    integerLiteralExpr <|> stringLiteralExpr <|> boolLiteralExpr
+
+integerLiteralExpr =
     integer >>= return . EVal . VInt
 
-stringExpr =
+stringLiteralExpr =
     stringLiteral >>= return . EVal . VStr
 
+boolLiteralExpr =
+    ( ( reservedWords "T TRUE" >> return True )
+      <|>
+      ( reservedWords "F FALSE" >> return False )
+    ) >>= return . EVal . VBool
+
+reservedWords = choice . map reserved . words
+
+opTable =
+    [ [ op "==" (cmpOp "==" (==)) l
+      , op "!=" (cmpOp "!=" (/=)) l
+      ]
+    ]
+  where
+    l = AssocLeft
+    r = AssocRight
+    op a f assoc = (`Infix` assoc) $
+        ((reservedOp a >> return f) <?> "operator")
+
+cmpOp name op l r = EBinOp binop l r
+  where
+    binop    = BinOp name opfn
+    opfn a b = VBool $ a `op` b
 
 gimlLexer :: P.TokenParser ()
 gimlLexer =
@@ -32,8 +62,8 @@ gimlLexer =
       { commentStart    = "/*"
       , commentEnd      = "*/"
       , commentLine     = "#"
-      , reservedNames   = []
-      , reservedOpNames = ["*","/","+","-"]
+      , reservedNames   = ["T", "TRUE", "F", "FALSE"]
+      , reservedOpNames = ["*","/","+","-","==","!="]
       }
     )
 

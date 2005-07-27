@@ -2,7 +2,11 @@
 
 -- Pretty printing support
 
-module PPrint where
+module PPrint (
+    pp,
+    module Text.PrettyPrint.HughesPJ,
+    PPrint(..)
+) where
 
 import Text.PrettyPrint.HughesPJ
 
