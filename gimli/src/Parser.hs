@@ -2,6 +2,7 @@ module Parser (
     gimlParse
 ) where
 
+import Data.Either
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
@@ -19,13 +20,14 @@ expr =
 factor = parens expr <|> literalExpr <?> "simple expression"
 
 literalExpr =
-        integerLiteralExpr
+        numberLiteralExpr
     <|> stringLiteralExpr
     <|> boolLiteralExpr
     <|> naLiteralExpr
 
-integerLiteralExpr =
-    integer >>= return . EVal . VInt
+numberLiteralExpr = do
+    sign <- option id (try (char '-') >> return negate)
+    naturalOrFloat >>= return . EVal . VNum . sign . either fromInteger id
 
 stringLiteralExpr =
     stringLiteral >>= return . EVal . VStr
@@ -79,17 +81,19 @@ runLex p input =
         eof
         return x
 
-whiteSpace    = glex P.whiteSpace
-lexeme        = glex P.lexeme
-symbol        = glex P.symbol
-natural       = glex P.natural
-integer       = glex P.integer
-parens        = glex P.parens
-semi          = glex P.semi
-identifier    = glex P.identifier
-reserved      = glex P.reserved
-reservedOp    = glex P.reservedOp
-stringLiteral = glex P.stringLiteral
+whiteSpace     = glex P.whiteSpace
+lexeme         = glex P.lexeme
+symbol         = glex P.symbol
+natural        = glex P.natural
+integer        = glex P.integer
+float          = glex P.float
+naturalOrFloat = glex P.naturalOrFloat
+parens         = glex P.parens
+semi           = glex P.semi
+identifier     = glex P.identifier
+reserved       = glex P.reserved
+reservedOp     = glex P.reservedOp
+stringLiteral  = glex P.stringLiteral
 
-glex f = f gimlLexer
+glex f         = f gimlLexer
 

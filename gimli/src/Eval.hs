@@ -17,14 +17,14 @@ eval e
 
 binOp :: BinOp -> Value -> Value -> Value
 binOp BinOpTimes = numOp (*)
-binOp BinOpDiv   = numOp div
+binOp BinOpDiv   = numOp (/)
 binOp BinOpAdd   = numOp (+)
 binOp BinOpSub   = numOp (-)
 binOp BinOpEq    = cmpOp (==)
 binOp BinOpNeq   = cmpOp (/=)
 
 cmpOp op = propNa (binWrap VBool id op)
-numOp op = propNa (binWrap VInt valInt op)
+numOp op = propNa (binWrap VNum valNum op)
 
 binWrap wrapper argfn op l r = wrapper (argfn l `op` argfn r)
 
