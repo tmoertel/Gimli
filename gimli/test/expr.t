@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 44;
+use Test::More tests => 46;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -11,6 +11,11 @@ use RunGimli;
 #==============================================================================
 # tests
 #==============================================================================
+
+# comments
+
+evals_ok( "1 # comment", 1 );
+evals_ok( "1 /* comment */ + /* comment */ 2", 3 );
 
 # integer literals
 
