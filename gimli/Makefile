@@ -21,7 +21,7 @@ test: all
 	prove test/*.t
 
 sanity: all
-	prove test/sanity.t
+	prove test/01-sanity.t
 
 recent: all
 	prove `find test/ -name '*.t' -mmin -60`
