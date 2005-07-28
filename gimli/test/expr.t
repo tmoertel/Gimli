@@ -84,32 +84,3 @@ evals_ok( "(NA)", "NA" );
 evals_ok( "NA + 1", "NA" );
 evals_ok( "NA == NA", "NA" );
 evals_ok( "NA != NA", "NA" );
-
-
-#==============================================================================
-# helpers
-#==============================================================================
-
-sub evals_ok {
-    no warnings 'once';
-    my ($expr, $expected_result) = @_;
-    my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
-    my $result = run_gimli($expr);
-    for ($result) { s/^\s+//s; s/\s+$//s; }  # trim whitespace
-    $test_fn->($result, $expected_result, "$expr ==> $expected_result");
-}
-
-sub evals_same_ok {
-    my ($expr) = @_;
-    evals_ok($expr, $expr);
-}
-
-sub evals_true_ok {
-    my ($expr) = @_;
-    evals_ok($expr, "TRUE");
-}
-
-sub evals_false_ok {
-    my ($expr) = @_;
-    evals_ok($expr, "FALSE");
-}

@@ -3,7 +3,8 @@ package RunGimli;
 use Exporter 'import';
 use File::Temp 'tempfile';
 
-our @EXPORT = (qw(run_gimli));
+our @EXPORT = (qw( run_gimli evals_ok evals_same_ok
+                   evals_true_ok evals_false_ok      ));
 
 sub run_gimli {
 
@@ -32,6 +33,30 @@ sub run_gimli {
     close $fh;
 
     return $results;
+}
+
+sub evals_ok {
+    no warnings 'once';
+    my ($expr, $expected_result) = @_;
+    my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
+    my $result = run_gimli($expr);
+    for ($result) { s/^\s+//s; s/\s+$//s; }  # trim whitespace
+    $test_fn->($result, $expected_result, "$expr ==> $expected_result");
+}
+
+sub evals_same_ok {
+    my ($expr) = @_;
+    evals_ok($expr, $expr);
+}
+
+sub evals_true_ok {
+    my ($expr) = @_;
+    evals_ok($expr, "TRUE");
+}
+
+sub evals_false_ok {
+    my ($expr) = @_;
+    evals_ok($expr, "FALSE");
 }
 
 
