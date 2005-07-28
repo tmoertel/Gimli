@@ -9,11 +9,9 @@ where
 
 import Value
 
-type BinFn = Value -> Value -> Value
-data BinOp = BinOp { boName :: String, boOp :: BinFn } 
-    deriving (Show)
-
-instance Show BinFn where show _ = "BinaryFn"
-
 data Expr = EVal Value | EBinOp BinOp Expr Expr
-    deriving (Show)
+    deriving (Show, Read, Eq, Ord)
+
+data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
+    deriving  (Show, Read, Eq, Ord)
+

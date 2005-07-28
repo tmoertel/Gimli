@@ -42,35 +42,22 @@ naLiteralExpr =
 reservedWords = choice . map reserved . words
 
 opTable =
-    [ [ op "*" (numOp "*" (*)) l
-      , op "/" (numOp "/" (div)) l
+    [ [ lop "*" BinOpTimes
+      , lop "/" BinOpDiv
       ]
-    , [ op "+" (numOp "+" (+)) l
-      , op "-" (numOp "-" (-)) l
+    , [ lop "+" BinOpAdd
+      , lop "-" BinOpSub
       ]
-    , [ op "==" (cmpOp "==" (==)) l
-      , op "!=" (cmpOp "!=" (/=)) l
+    , [ lop "==" BinOpEq
+      , lop "!=" BinOpNeq
       ]
     ]
   where
-    l = AssocLeft
-    r = AssocRight
-    op a f assoc = (`Infix` assoc) $
+    lop s ctor    = op s (bexp ctor) AssocLeft
+    rop s ctor    = op s (bexp ctor) AssocRight
+    bexp ctor l r = EBinOp ctor l r
+    op a f assoc  = (`Infix` assoc) $
         ((reservedOp a >> return f) <?> "operator")
-
-cmpOp name op l r = EBinOp binop l r
-  where
-    binop    = BinOp name (propNa opfn)
-    opfn a b = VBool $ a `op` b
-
-numOp name op l r = EBinOp binop l r
-  where
-    binop    = BinOp name (propNa opfn)
-    opfn a b = VInt $ valInt a `op` valInt b
-
-propNa _ VNa _   = VNa
-propNa _ _   VNa = VNa
-propNa f a   b   = f a b
 
 gimlLexer :: P.TokenParser ()
 gimlLexer =
