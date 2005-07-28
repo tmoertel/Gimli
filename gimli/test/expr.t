@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 46;
+use Test::More tests => 51;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -84,3 +84,11 @@ evals_ok( "(NA)", "NA" );
 evals_ok( "NA + 1", "NA" );
 evals_ok( "NA == NA", "NA" );
 evals_ok( "NA != NA", "NA" );
+
+# bad expressions
+
+evals_ok( "1 +", qr/error/ );
+evals_ok( "+ 1", qr/error/ );
+evals_ok( '"open string', qr/error/ );
+evals_ok( "1.a", qr/error/ );
+evals_ok( "BLAH", qr/error/ );
