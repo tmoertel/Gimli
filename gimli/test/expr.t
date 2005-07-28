@@ -15,7 +15,7 @@ use RunGimli;
 # comments
 
 evals_ok( "1 # comment", 1 );
-evals_ok( "1 /* comment */ + /* comment */ 2", 3 );
+evals_same_ok( '"not a # comment"' );
 
 # integer literals
 

@@ -65,8 +65,8 @@ gimlLexer :: P.TokenParser ()
 gimlLexer =
     P.makeTokenParser
     ( javaStyle
-      { commentStart    = "/*"
-      , commentEnd      = "*/"
+      { commentStart    = ""
+      , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA"]
       , reservedOpNames = ["*","/","+","-","==","!="]
