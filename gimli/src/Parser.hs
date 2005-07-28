@@ -11,7 +11,11 @@ import qualified Text.ParserCombinators.Parsec.Token as P
 import Expr
 
 gimlParse =
-    parse expr
+    parse $ do
+        whiteSpace
+        e <- expr
+        eof
+        return e
 
 expr :: Parser Expr
 expr =

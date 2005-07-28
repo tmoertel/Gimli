@@ -68,7 +68,7 @@ eval cmd@(':':_)
     | otherwise
     = liftIO . putStrLn $ "Unknown command: \"" ++ cmd ++ "\""
 eval cmd = do
-    liftIO $ case Parser.gimlParse "input" cmd of
+    liftIO $ case parse cmd of
         Left err   -> putStrLn $ "error: " ++ show err
         Right expr -> putStrLn . pp $ Eval.eval expr
 
@@ -76,8 +76,9 @@ eval cmd = do
 -- System commands
 
 sysCommands =
-    [ (":quit", sysQuit)
-    , (":?",    sysHelp)
+    [ (":quit",    sysQuit)
+    , (":?",       sysHelp)
+    , (":inspect", sysInspect)
     ]
 
 sysQuit _ =
@@ -87,6 +88,14 @@ sysHelp _ =
     liftIO . putStrLn . unlines $
     "Commands I know:" : map (("  " ++) . fst) sysCommands
 
+sysInspect =
+    liftIO . putStrLn . either show pp . parse . skipToArgs
+
+parse =
+    Parser.gimlParse "input"
+
+skipToArgs =
+    dropWhile (' ' /=)
 
 -- Terminal helpers
 
