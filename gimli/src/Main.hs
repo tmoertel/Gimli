@@ -63,7 +63,8 @@ repl =
     return () `maybe` \cmd -> eval cmd >> repl
 
 eval cmd@(':':_)
-    | Just cmdFn <- lookup (head $ words cmd) sysCommands
+    | Just cmdFn <- let c = head (words cmd) in
+                    lookup c $ mapFst (take (length c)) sysCommands
     = cmdFn cmd
     | otherwise
     = liftIO . putStrLn $ "Unknown command: \"" ++ cmd ++ "\""
@@ -71,6 +72,10 @@ eval cmd = do
     liftIO $ case parse cmd of
         Left err   -> putStrLn $ "error: " ++ show err
         Right expr -> putStrLn . pp $ Eval.eval expr
+
+mapFst f = map (cross (f, id))
+pair (f, g) x = (f x, g x)
+cross (f, g)  = pair (f . fst, g . snd)
 
 
 -- System commands
