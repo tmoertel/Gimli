@@ -21,7 +21,8 @@ expr :: Parser Expr
 expr =
     buildExpressionParser opTable factor
 
-factor = parens expr <|> literalExpr <?> "simple expression"
+factor =
+    parens expr <|> literalExpr <?> "simple expression"
 
 literalExpr =
         numberLiteralExpr
