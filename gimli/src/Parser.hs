@@ -66,9 +66,7 @@ cmpOp name op l r = EBinOp binop l r
 numOp name op l r = EBinOp binop l r
   where
     binop    = BinOp name (propNa opfn)
-    opfn (VInt a) (VInt b) = VInt $ a `op` b
-    opfn (VInt a) _        = VInt $ a `op` 0
-    opfn _        (VInt b) = VInt $ 0 `op` b
+    opfn a b = VInt $ valInt a `op` valInt b
 
 propNa _ VNa _   = VNa
 propNa _ _   VNa = VNa
