@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 51;
+use Test::More tests => 53;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -71,10 +71,12 @@ evals_ok( "1 + 2 * 3", 7 );
 evals_ok( "(1 + 2) * 3", 9 );
 evals_ok( "9 / 3", 3 );
 
-# promotion of non-numerics to zero in arithmetic expressions
+# promotion of non-numerics in arithmetic ops
 
-evals_ok( "1 + T", 1 );
-evals_ok( "1 * T", 0 );
+evals_ok( "1 + T", 2 );
+evals_ok( "1 * T", 1 );
+evals_ok( "1 + F", 1 );
+evals_ok( "1 * F", 0 );
 evals_ok( '"4" * 1', 0 );
 
 # NAs

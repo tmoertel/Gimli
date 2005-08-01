@@ -22,29 +22,46 @@ expr =
     buildExpressionParser opTable factor
 
 factor =
-    parens expr <|> literalExpr <?> "simple expression"
+    nullExpr <|> parens expr <|> vectorExpr <?> "simple expression"
 
-literalExpr =
+nullExpr = do
+    reserved "NULL" <|> try (brackets $ return ())
+    return (EVal VNull)
+
+vectorExpr = do
+    (scalarLiteralExpr >>= return . v)
+    <|>
+    (bracketVectorExpr >>= return . v)
+
+scalarLiteralExpr =
         numberLiteralExpr
     <|> stringLiteralExpr
     <|> boolLiteralExpr
     <|> naLiteralExpr
 
+bracketVectorExpr =
+    (brackets (commaSep1 scalarLiteralExpr))
+    <|>
+    (reserved "c" >> parens (commaSep1 scalarLiteralExpr))
+
+v :: ToVector x => x -> Expr
+v = EVal . VVector . toVector
+
 numberLiteralExpr = do
     sign <- option id (try (char '-') >> return negate)
-    naturalOrFloat >>= return . EVal . VNum . sign . either fromInteger id
+    naturalOrFloat >>= return . SNum . sign . either fromInteger id
 
 stringLiteralExpr =
-    stringLiteral >>= return . EVal . VStr
+    stringLiteral >>= return . SStr
 
 boolLiteralExpr =
     ( ( reservedWords "T TRUE" >> return True )
       <|>
       ( reservedWords "F FALSE" >> return False )
-    ) >>= return . EVal . VBool
+    ) >>= return . SLog
 
 naLiteralExpr =
-    reserved "NA" >> return (EVal VNa)
+    reserved "NA" >> return SNa
 
 reservedWords = choice . map reserved . words
 
@@ -69,11 +86,11 @@ opTable =
 gimlLexer :: P.TokenParser ()
 gimlLexer =
     P.makeTokenParser
-    ( javaStyle
+    ( haskellDef
       { commentStart    = ""
       , commentEnd      = ""
       , commentLine     = "#"
-      , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA"]
+      , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"]
       , reservedOpNames = ["*","/","+","-","==","!="]
       }
     )
@@ -99,6 +116,9 @@ identifier     = glex P.identifier
 reserved       = glex P.reserved
 reservedOp     = glex P.reservedOp
 stringLiteral  = glex P.stringLiteral
+commaSep1      = glex P.commaSep1
+brackets       = glex P.brackets
+squares        = glex P.squares
 
 glex f         = f gimlLexer
 

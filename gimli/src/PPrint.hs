@@ -1,9 +1,9 @@
-{-# OPTIONS -fglasgow-exts #-}
+{-# OPTIONS -fglasgow-exts -fallow-overlapping-instances #-}
 
 -- Pretty printing support
 
 module PPrint (
-    pp,
+    pp, listToDoc,
     module Text.PrettyPrint.HughesPJ,
     PPrint(..)
 ) where
@@ -16,6 +16,9 @@ pp = render . toDoc
 class Show a => PPrint a where
     toDoc :: a -> Doc
     toDoc = text . show
+
+listToDoc :: PPrint a => [a] -> Doc
+listToDoc = brackets . cat . punctuate comma . map toDoc
 
 instance PPrint Int
 instance PPrint Integer

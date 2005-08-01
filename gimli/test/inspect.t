@@ -13,7 +13,7 @@ use RunGimli;
 #==============================================================================
 
 evals_ok( ":inspect 1",
-          "EVal (VNum 1.0)" );
+          "EVal (VVector (V VTNum 1 [SNum 1.0]))" );
 
 evals_ok( ":i 1 + 2",
-          "EBinOp BinOpAdd (EVal (VNum 1.0)) (EVal (VNum 2.0))" );
+          "EBinOp BinOpAdd (EVal (VVector (V VTNum 1 [SNum 1.0]))) (EVal (VVector (V VTNum 1 [SNum 2.0])))" );
