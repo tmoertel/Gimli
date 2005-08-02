@@ -5,9 +5,10 @@ module Main (main) where
 import Control.Exception
 import Control.Monad.Cont
 import Control.Monad.State
+import Data.Char
 import Data.Maybe
 
-import qualified System.Console.SimpleLineEditor as LE
+import qualified System.Console.Readline as LE
 import qualified System.Posix.Terminal as Terminal
 
 import qualified Version as Version
@@ -57,9 +58,10 @@ enterRepl s0 = do
         callCC $ \exitCont -> do
             modify $ \s -> s { stExit = exitCont }
             repl
+        restoreTerminal
 
 repl =
-    promptTerminal >>=
+    getCommand >>=
     return () `maybe` \cmd -> eval cmd >> repl
 
 eval cmd@(':':_)
@@ -105,11 +107,23 @@ skipToArgs =
 -- Terminal helpers
 
 initializeTerminal =
-    gets stTerminal >>= (`when` liftIO LE.initialise)
+    gets stTerminal >>= (`when` liftIO LE.initialize)
 
-promptTerminal = do
+restoreTerminal =
+    return ()
+    -- gets stTerminal >>= (`when` liftIO LE.restore)
+
+getCommand = do
     term <- gets stTerminal
     liftIO $
         handle (\_ -> return Nothing) $
-        if term then LE.getLineEdited "gimli> "
+        if term then prompt
         else getLine >>= return . Just
+
+prompt = do
+    LE.readline "gimli> " >>= doCommand
+
+doCommand Nothing = return Nothing
+doCommand cmd@(Just line)
+    | all isSpace line = prompt
+    | otherwise        = LE.addHistory line >> return cmd
