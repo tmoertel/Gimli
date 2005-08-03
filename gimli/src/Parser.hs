@@ -13,16 +13,24 @@ import Expr
 gimlParse =
     parse $ do
         whiteSpace
-        e <- expr
+        es <- semiSep1 expr
         eof
-        return e
+        return $ case es of
+            [e] -> e
+            _   -> ESeries es
 
 expr :: Parser Expr
-expr =
+expr = 
     buildExpressionParser opTable factor
 
 factor =
-    nullExpr <|> parens expr <|> vectorExpr <?> "simple expression"
+        nullExpr
+    <|> parens expr
+    <|> ( vectorExpr <?> "vector" )
+    <|> varExpr
+
+varExpr =
+    identifier >>= return . EVar
 
 nullExpr = do
     reserved "NULL" <|> try (brackets $ return ())
@@ -66,19 +74,24 @@ naLiteralExpr =
 reservedWords = choice . map reserved . words
 
 opTable =
-    [ [ lop "*" BinOpTimes
-      , lop "/" BinOpDiv
+    [ [ vlop "*" BinOpTimes
+      , vlop "/" BinOpDiv
       ]
-    , [ lop "+" BinOpAdd
-      , lop "-" BinOpSub
+    , [ vlop "+" BinOpAdd
+      , vlop "-" BinOpSub
       ]
-    , [ lop "==" BinOpEq
-      , lop "!=" BinOpNeq
+    , [ vlop "==" BinOpEq
+      , vlop "!=" BinOpNeq
+      ]
+    , [ erop "<-" EBind
+      , elop "->" (flip EBind)
       ]
     ]
   where
-    lop s ctor    = op s (bexp ctor) AssocLeft
-    rop s ctor    = op s (bexp ctor) AssocRight
+    vlop s ctor   = op s (bexp ctor) AssocLeft
+    vrop s ctor   = op s (bexp ctor) AssocRight
+    elop s ctor   = op s ctor AssocLeft
+    erop s ctor   = op s ctor AssocRight
     bexp ctor l r = EBinOp ctor l r
     op a f assoc  = (`Infix` assoc) $
         ((reservedOp a >> return f) <?> "operator")
@@ -91,7 +104,7 @@ gimlLexer =
       , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"]
-      , reservedOpNames = ["*","/","+","-","==","!="]
+      , reservedOpNames = ["*","/","+","-","==","!=","<-","->"]
       }
     )
 
@@ -119,6 +132,8 @@ stringLiteral  = glex P.stringLiteral
 commaSep1      = glex P.commaSep1
 brackets       = glex P.brackets
 squares        = glex P.squares
+semiSep        = glex P.semiSep
+semiSep1       = glex P.semiSep1
 
 glex f         = f gimlLexer
 

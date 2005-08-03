@@ -1,19 +1,83 @@
+{-# OPTIONS -fglasgow-exts #-}
+
 module Eval (
-    eval
+    eval, evalTop, run, emptyEnv,
+    EvalState
 ) where
 
+import Control.Monad.Cont
+import Control.Monad.State
+import qualified Data.Map as Map
+
+import PPrint
 import Expr
 
-eval :: Expr -> Value
+type Closure    = (Env, Value, Maybe Expr)
+
+clEnv (e,_,_) = e
+clVal (_,v,_) = v
+clExp (_,v,x) = x
+
+nullClosure = (emptyEnv, VNull, Nothing)
+
+type EnvMap     = Map.Map Identifier Closure
+data Env        = Env EnvMap
+
+emptyEnv :: Env
+emptyEnv  = Env Map.empty
+
+modifyEnv :: (EnvMap -> EnvMap) -> Env -> Env
+modifyEnv f (Env emap) = Env (f emap)
+
+envMap (Env emap) = emap
+
+-- Eval monad
+
+type EvalState   = Env
+type Eval r a    = ContT r (StateT EvalState IO) a
+
+stEnv = id
+
+bind ident valExpr = do
+    env <- gets stEnv
+    val <- eval valExpr
+    modify $ modifyEnv $ Map.insert ident (env, val, Just valExpr)
+    return val
+
+
+evalTop :: Expr -> IO Value
+evalTop =
+    (`evalStateT` emptyEnv) . (`runContT` return) . eval
+
+run :: EvalState -> Expr -> IO (Value, EvalState)
+run st =
+    (`runStateT` st) . (`runContT` return) . eval
 
 eval (EVal v)
-    = v
+    = return v
+
+eval (EBind lvalue ev)
+    | EVar ident <- lvalue = bind ident ev
+    | otherwise            = error $ "cannot bind to non-lvalue: " ++ pp lvalue
+
+eval (EVar ident)
+    = gets stEnv >>=
+      return . clVal . Map.findWithDefault nullClosure ident . envMap
 
 eval (EBinOp op l r)
-    = binOp op (eval l) (eval r)
+    = do
+      lval <- eval l
+      rval <- eval r
+      return $ binOp op lval rval
 
+eval (ESeries es)
+    | es == []  = return VNull
+    | otherwise = foldr1 (>>) $ map eval es
+
+{-
 eval e
     = error $ "eval error; could not eval (" ++ show e ++ ")"
+-}
 
 binOp :: BinOp -> Value -> Value -> Value
 binOp BinOpTimes = numOp (*)

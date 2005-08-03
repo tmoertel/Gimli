@@ -23,8 +23,15 @@ import PPrint
 main = do
     term <- Terminal.queryTerminal 0
     when term welcome
-    enterRepl $ ReplState { stExit = undefined, stTerminal = term }
+    enterRepl $ initialState term
     when term $ putStrLn "Exiting."
+    
+
+initialState term =
+    ReplState { stExit = undefined
+              , stTerminal = term
+              , stEvalState = Eval.emptyEnv
+              }
 
 welcome =
     putStrLn . unlines $
@@ -41,13 +48,15 @@ welcome =
 type ReplCtx r = ContT r (StateT (ReplState r ()) IO) ()
 
 data ReplState r a =
-    ReplState { stExit :: a -> ContT r (StateT (ReplState r a) IO) a
-              , stTerminal :: Bool
+    ReplState { stExit      :: a -> ContT r (StateT (ReplState r a) IO) a
+              , stTerminal  :: Bool
+              , stEvalState :: Eval.EvalState
               }
 
 exit val =
     gets stExit >>= ($ val)
 
+putEvalState s = modify $ \rs -> rs { stEvalState = s }
 
 -- Read-Eval-Print Loop
 
@@ -71,9 +80,15 @@ eval cmd@(':':_)
     | otherwise
     = liftIO . putStrLn $ "Unknown command: \"" ++ cmd ++ "\""
 eval cmd = do
-    liftIO $ case parse cmd of
-        Left err   -> putStrLn $ "error: " ++ show err
-        Right expr -> putStrLn . pp $ Eval.eval expr
+    case parse cmd of
+        Left err   -> liftIO $ putStrLn $ "error: " ++ show err
+        Right expr -> doEval expr >>= liftIO . putStrLn . pp
+
+doEval expr = do
+    st <- gets stEvalState
+    (val, st') <- liftIO $ Eval.run st expr
+    putEvalState st'
+    return val
 
 mapFst f = map (cross (f, id))
 pair (f, g) x = (f x, g x)

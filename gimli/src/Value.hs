@@ -1,6 +1,10 @@
 {-# OPTIONS -fglasgow-exts #-}
 
-module Value where
+module Value (
+    Value(..),
+    Scalar(..), toSNum,
+    Vector(..), ToVector(..), vlen, vtype, vlist
+) where
 
 import Control.Monad
 import Data.Maybe
@@ -15,7 +19,7 @@ data Value
 instance PPrint Value where
     toDoc (VVector v) = toDoc v
     toDoc VNull       = text "NULL"
-    toDoc x           = error $ "don't know how to pp " ++ show x
+--    toDoc x           = error $ "don't know how to pp " ++ show x
 
 data Scalar     -- ^ scalar value
   = SStr String -- ^ string
@@ -66,7 +70,7 @@ vtPromote VTNum (SLog _)  = VTNum
 vtPromote _     (SStr _)  = VTStr
 vtPromote _     (SNum _)  = VTNum
 vtPromote _     (SLog _)  = VTLog
-vtPromote t _             = t
+vtPromote t     _         = t
 
 vtCoerce _ SNull  = Nothing
 vtCoerce VTStr x  = Just . keepNas toSStr $ x

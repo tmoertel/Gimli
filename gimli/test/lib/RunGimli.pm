@@ -37,26 +37,27 @@ sub run_gimli {
 
 sub evals_ok {
     no warnings 'once';
-    my ($expr, $expected_result) = @_;
+    my ($expr, $expected_result, $name) = @_;
     my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
     my $result = run_gimli($expr);
     for ($result) { s/^\s+//s; s/\s+$//s; }  # trim whitespace
-    $test_fn->($result, $expected_result, "$expr ==> $expected_result");
+    $test_fn->($result, $expected_result,
+               $name || "$expr ==> $expected_result");
 }
 
 sub evals_same_ok {
-    my ($expr) = @_;
-    evals_ok($expr, $expr);
+    my ($expr, $name) = @_;
+    evals_ok($expr, $expr, $name);
 }
 
 sub evals_true_ok {
-    my ($expr) = @_;
-    evals_ok($expr, "TRUE");
+    my ($expr, $name) = @_;
+    evals_ok($expr, "TRUE", $name);
 }
 
 sub evals_false_ok {
-    my ($expr) = @_;
-    evals_ok($expr, "FALSE");
+    my ($expr, $name) = @_;
+    evals_ok($expr, "FALSE", $name);
 }
 
 
