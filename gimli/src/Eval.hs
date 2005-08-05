@@ -44,7 +44,6 @@ bind ident valExpr = do
     modify $ modifyEnv $ Map.insert ident (env, val, Just valExpr)
     return val
 
-
 evalTop :: Expr -> IO Value
 evalTop =
     (`evalStateT` emptyEnv) . (`runContT` return) . eval

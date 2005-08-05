@@ -15,6 +15,7 @@ import qualified Version as Version
 import qualified Name as Name
 import qualified Parser as Parser
 import qualified Eval as Eval
+import qualified Value as Value
 import PPrint
 
 
@@ -80,13 +81,16 @@ eval cmd@(':':_)
     | otherwise
     = liftIO . putStrLn $ "Unknown command: \"" ++ cmd ++ "\""
 eval cmd = do
-    case parse cmd of
-        Left err   -> liftIO $ putStrLn $ "error: " ++ show err
-        Right expr -> doEval expr >>= liftIO . putStrLn . pp
+    result <- case parse cmd of
+        Left err   -> return (Value.VError $ show err)
+        Right expr -> doEval expr
+    liftIO $ putStrLn (pp result)
 
 doEval expr = do
     st <- gets stEvalState
-    (val, st') <- liftIO $ Eval.run st expr
+    (val, st') <-  liftIO $
+        handle (\e -> return (Value.VError $ show e, st)) $
+        Eval.run st expr
     putEvalState st'
     return val
 
@@ -136,9 +140,9 @@ getCommand = do
         else getLine >>= return . Just
 
 prompt = do
-    LE.readline "gimli> " >>= doCommand
+    LE.readline "gimli> " >>= preparse
 
-doCommand Nothing = return Nothing
-doCommand cmd@(Just line)
+preparse Nothing = return Nothing
+preparse cmd@(Just line)
     | all isSpace line = prompt
     | otherwise        = LE.addHistory line >> return cmd

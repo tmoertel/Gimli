@@ -14,11 +14,13 @@ import PPrint
 data Value
   = VVector Vector
   | VNull   
+  | VError String
     deriving (Read, Show, Ord, Eq)
 
 instance PPrint Value where
     toDoc (VVector v) = toDoc v
     toDoc VNull       = text "NULL"
+    toDoc (VError s)  = text $ "error: " ++ s
 --    toDoc x           = error $ "don't know how to pp " ++ show x
 
 data Scalar     -- ^ scalar value
