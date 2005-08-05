@@ -74,24 +74,24 @@ naLiteralExpr =
 reservedWords = choice . map reserved . words
 
 opTable =
-    [ [ vlop "*" BinOpTimes
-      , vlop "/" BinOpDiv
+    [ [ vopl "*" BinOpTimes
+      , vopl "/" BinOpDiv
       ]
-    , [ vlop "+" BinOpAdd
-      , vlop "-" BinOpSub
+    , [ vopl "+" BinOpAdd
+      , vopl "-" BinOpSub
       ]
-    , [ vlop "==" BinOpEq
-      , vlop "!=" BinOpNeq
+    , [ vopl "==" BinOpEq
+      , vopl "!=" BinOpNeq
       ]
-    , [ erop "<-" EBind
-      , elop "->" (flip EBind)
+    , [ eopr "<-" EBind
+      , eopl "->" (flip EBind)
       ]
     ]
   where
-    vlop s ctor   = op s (bexp ctor) AssocLeft
-    vrop s ctor   = op s (bexp ctor) AssocRight
-    elop s ctor   = op s ctor AssocLeft
-    erop s ctor   = op s ctor AssocRight
+    vopl s ctor   = op s (bexp ctor) AssocLeft
+    vopr s ctor   = op s (bexp ctor) AssocRight
+    eopl s ctor   = op s ctor AssocLeft
+    eopr s ctor   = op s ctor AssocRight
     bexp ctor l r = EBinOp ctor l r
     op a f assoc  = (`Infix` assoc) $
         ((reservedOp a >> return f) <?> "operator")
