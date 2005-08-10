@@ -111,6 +111,9 @@ takeLogical tx (SLog True) = Just tx
 takeLogical _  SNa         = Just SNa
 takeLogical _  _           = Nothing
 
+-- ============================================================================
+-- binary operations
+-- ============================================================================
 
 binOp :: BinOp -> Value -> Value -> Value
 binOp BinOpTimes    = numOp (*)

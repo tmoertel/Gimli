@@ -25,6 +25,11 @@ instance PPrint Value where
     toDoc (VError s)  = text $ "error: " ++ s
 --    toDoc x           = error $ "don't know how to pp " ++ show x
 
+
+-- ============================================================================
+-- scalars
+-- ============================================================================
+
 data Scalar     -- ^ scalar value
   = SStr String -- ^ string
   | SNum Double -- ^ numeric
@@ -39,6 +44,27 @@ instance PPrint Scalar where
     toDoc (SStr x)  = toDoc x
     toDoc (SLog b)  = text $ if b then "TRUE" else "FALSE"
     toDoc  SNa      = text "NA"
+
+
+-- coercions
+
+toSStr ss@(SStr _)   = ss
+toSStr x             = SStr (pp x)
+
+toSNum sn@(SNum _)   = sn
+toSNum (SLog True)   = SNum 1.0
+toSNum _             = SNum 0.0
+
+toSLog sl@(SLog _)   = sl
+toSLog (SNum 1.0)    = SLog True
+toSLog (SStr "TRUE") = SLog True
+toSLog (SStr "T")    = SLog True
+toSLog _             = SLog False
+
+
+-- ============================================================================
+-- vectors
+-- ============================================================================
 
 data Vector  = V VecType Int [Scalar]
                deriving (Read, Show, Ord, Eq)
@@ -91,16 +117,3 @@ vtCoerce VTLog x  = Just . keepNas toSLog $ x
 
 keepNas f SNa = SNa
 keepNas f s   = f s
-
-toSStr ss@(SStr _)   = ss
-toSStr x             = SStr (pp x)
-
-toSNum sn@(SNum _)   = sn
-toSNum (SLog True)   = SNum 1.0
-toSNum _             = SNum 0.0
-
-toSLog sl@(SLog _)   = sl
-toSLog (SNum 1.0)    = SLog True
-toSLog (SStr "TRUE") = SLog True
-toSLog (SStr "T")    = SLog True
-toSLog _             = SLog False
