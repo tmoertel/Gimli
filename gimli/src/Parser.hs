@@ -20,13 +20,23 @@ gimlParse =
             _   -> ESeries es
 
 expr :: Parser Expr
-expr = 
+expr =
+        try selectExpr
+    <|> infixExpr
+    <?> "expression"
+
+selectExpr = do
+    target  <- infixExpr
+    selects <- many (brackets expr)
+    return $ foldl1 ESelect (target:selects)
+
+infixExpr = 
     buildExpressionParser opTable factor
 
 factor =
         nullExpr
     <|> parens expr
-    <|> ( vectorExpr <?> "vector" )
+    <|> vectorExpr
     <|> varExpr
 
 varExpr =
@@ -40,20 +50,23 @@ vectorExpr = do
     (scalarLiteralExpr >>= return . v)
     <|>
     (bracketVectorExpr >>= return . v)
-
-scalarLiteralExpr =
-        numberLiteralExpr
-    <|> stringLiteralExpr
-    <|> boolLiteralExpr
-    <|> naLiteralExpr
+    <?> "vector"
+  where
+    v :: ToVector x => x -> Expr
+    v = EVal . VVector . toVector
 
 bracketVectorExpr =
     (brackets (commaSep1 scalarLiteralExpr))
     <|>
     (reserved "c" >> parens (commaSep1 scalarLiteralExpr))
 
-v :: ToVector x => x -> Expr
-v = EVal . VVector . toVector
+scalarLiteralExpr =
+        numberLiteralExpr
+    <|> stringLiteralExpr
+    <|> boolLiteralExpr
+    <|> naLiteralExpr
+    <?> "scalar literal"
+
 
 numberLiteralExpr = do
     sign <- option id (try (char '-') >> return negate)
@@ -93,13 +106,12 @@ opTable =
     eopl s ctor   = op s ctor AssocLeft
     eopr s ctor   = op s ctor AssocRight
     bexp ctor l r = EBinOp ctor l r
-    op a f assoc  = (`Infix` assoc) $
-        ((reservedOp a >> return f) <?> "operator")
+    op a f assoc  = (reservedOp a >> return f) `Infix` assoc
 
 gimlLexer :: P.TokenParser ()
 gimlLexer =
     P.makeTokenParser
-    ( haskellDef
+    ( haskellStyle
       { commentStart    = ""
       , commentEnd      = ""
       , commentLine     = "#"

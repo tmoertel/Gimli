@@ -3,7 +3,8 @@
 module Value (
     Value(..),
     Scalar(..), toSNum,
-    Vector(..), ToVector(..), vlen, vtype, vlist
+    Vector(..), ToVector(..), vlen, vtype, vlist,
+    VecType(..)
 ) where
 
 import Control.Monad
@@ -62,10 +63,12 @@ instance ToVector Scalar   where toVector x = mkVector [x]
 instance ToVector [Scalar] where toVector   = mkVector
 
 mkVector :: [Scalar] -> Vector
-mkVector xs = V vt (length vl) vl
+mkVector xs = mkVectorOfType (foldl vtPromote VTLog xs) xs
+
+mkVectorOfType :: VecType -> [Scalar] -> Vector
+mkVectorOfType vtype xs = V vtype (length vl) vl
   where
-    vt = foldl vtPromote VTLog xs
-    vl = mapMaybe (vtCoerce vt) xs
+    vl = mapMaybe (vtCoerce vtype) xs
 
 vtPromote VTStr _         = VTStr
 vtPromote VTNum (SLog _)  = VTNum

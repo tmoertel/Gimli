@@ -8,6 +8,7 @@ module Eval (
 import Control.Monad.Cont
 import Control.Monad.State
 import qualified Data.Map as Map
+import Data.Maybe
 
 import PPrint
 import Expr
@@ -73,10 +74,43 @@ eval (ESeries es)
     | es == []  = return VNull
     | otherwise = foldr1 (>>) $ map eval es
 
+eval (ESelect etarget eselect) = do
+    target <- eval etarget
+    case target of
+        VVector vec -> eval eselect >>= return . VVector . selectVector vec
+
 {-
 eval e
     = error $ "eval error; could not eval (" ++ show e ++ ")"
 -}
+
+-- Select elements _es_ from vector _vec_:
+
+selectVector (V tvtype _ txs) (VVector (V VTNum _ sxs)) =
+    V tvtype (length xs) xs
+  where
+    xs   = map (pull txs') sxs'
+    txs' = txs ++ repeat SNa
+    sxs' = if sxs == [ sx | sx@(SNum n) <- sxs, n < 0 ]
+           then [ SNum n
+                  | n <- map fromIntegral [1..length txs]
+                  , negate n `notElem` nsxs ]
+           else sxs
+    nsxs = [ n | SNum n <- sxs ]
+selectVector (V tvtype _ txs) (VVector (V VTLog _ sxs)) =
+    V tvtype (length xs) xs
+  where
+    xs   = catMaybes $ zipWith takeLogical txs sxs
+selectVector _ _ = error "vector-selection criteria must be a vector"
+
+
+pull xs (SNum n) = xs !! (round n - 1)
+pull _  _        = SNa
+
+takeLogical tx (SLog True) = Just tx
+takeLogical _  SNa         = Just SNa
+takeLogical _  _           = Nothing
+
 
 binOp :: BinOp -> Value -> Value -> Value
 binOp BinOpTimes = numOp (*)

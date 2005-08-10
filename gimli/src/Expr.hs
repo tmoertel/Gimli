@@ -19,6 +19,7 @@ data Expr
   | ESeries [Expr]
   | EVar Identifier
   | EBind Expr Expr
+  | ESelect Expr Expr
   deriving (Show, Read, Eq, Ord)
 
 data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
