@@ -3,7 +3,8 @@
 module Value (
     Value(..),
     Scalar(..), toSNum,
-    Vector(..), ToVector(..), vlen, vtype, vlist,
+    Vector(..), ToVector(..),
+        vlen, vtype, vlist, vectorCoerce, vecNum, mkVector,
     VecType(..)
 ) where
 
@@ -69,6 +70,12 @@ mkVectorOfType :: VecType -> [Scalar] -> Vector
 mkVectorOfType vtype xs = V vtype (length vl) vl
   where
     vl = mapMaybe (vtCoerce vtype) xs
+
+vectorCoerce vtype vec =
+    mkVectorOfType vtype (vlist vec)
+
+vecNum (V _ _ (x:_)) =
+    case toSNum x of (SNum n) -> n
 
 vtPromote VTStr _         = VTStr
 vtPromote VTNum (SLog _)  = VTNum

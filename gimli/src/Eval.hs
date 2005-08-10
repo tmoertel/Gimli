@@ -113,15 +113,22 @@ takeLogical _  _           = Nothing
 
 
 binOp :: BinOp -> Value -> Value -> Value
-binOp BinOpTimes = numOp (*)
-binOp BinOpDiv   = numOp (/)
-binOp BinOpAdd   = numOp (+)
-binOp BinOpSub   = numOp (-)
-binOp BinOpEq    = cmpOp (==)
-binOp BinOpNeq   = cmpOp (/=)
+binOp BinOpTimes    = numOp (*)
+binOp BinOpDiv      = numOp (/)
+binOp BinOpAdd      = numOp (+)
+binOp BinOpSub      = numOp (-)
+binOp BinOpEllipses = doEllipses
+
+binOp BinOpEq       = cmpOp (==)
+binOp BinOpNeq      = cmpOp (/=)
 
 cmpOp op x y = VVector $ vectorize (propNa (binWrap SLog id op)) x y
 numOp op x y = VVector $ vectorize (propNa (binWrap SNum valNum op)) x y
+
+doEllipses (VVector start) (VVector end) =
+    VVector $ mkVector $ map SNum [ (vecNum start) .. (vecNum end) ]
+doEllipses _ _ =
+    VError $ "both operands to the (:) operator must be vectors"
 
 valNum x =
     case toSNum x of

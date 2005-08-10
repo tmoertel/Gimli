@@ -23,7 +23,7 @@ data Expr
   deriving (Show, Read, Eq, Ord)
 
 data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
-           | BinOpBindL | BinOpBindR
+           | BinOpBindL | BinOpBindR | BinOpEllipses
     deriving  (Show, Read, Eq, Ord)
 
 instance PPrint Expr

@@ -87,7 +87,9 @@ naLiteralExpr =
 reservedWords = choice . map reserved . words
 
 opTable =
-    [ [ vopl "*" BinOpTimes
+    [ [ vopl ":" BinOpEllipses
+      ]
+    , [ vopl "*" BinOpTimes
       , vopl "/" BinOpDiv
       ]
     , [ vopl "+" BinOpAdd
@@ -116,7 +118,7 @@ gimlLexer =
       , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"]
-      , reservedOpNames = ["*","/","+","-","==","!=","<-","->"]
+      , reservedOpNames = ["*","/","+","-","==","!=","<-","->",":"]
       }
     )
 
