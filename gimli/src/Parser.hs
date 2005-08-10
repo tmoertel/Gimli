@@ -24,9 +24,9 @@ expr =
     <|> infixExpr
     <?> "expression"
 
-selectExpr = do
+selectExpr = (<?> "selection") $ do
     target  <- infixExpr
-    selects <- many (brackets expr)
+    selects <- many1 (brackets expr)
     return $ foldl1 ESelect (target:selects)
 
 infixExpr = 
@@ -37,6 +37,7 @@ factor =
     <|> parens expr
     <|> vectorExpr
     <|> varExpr
+    <?> "simple expression"
 
 varExpr =
     identifier >>= return . EVar
@@ -46,18 +47,17 @@ nullExpr = do
     return (EVal VNull)
 
 vectorExpr = do
-    (scalarLiteralExpr >>= return . v)
-    <|>
-    (bracketVectorExpr >>= return . v)
+        (scalarLiteralExpr >>= return . v)
+    <|> (bracketVectorExpr >>= return . v)
     <?> "vector"
   where
     v :: ToVector x => x -> Expr
     v = EVal . VVector . toVector
 
 bracketVectorExpr =
-    (brackets (commaSep1 scalarLiteralExpr))
-    <|>
-    (reserved "c" >> parens (commaSep1 scalarLiteralExpr))
+        (brackets (commaSep1 scalarLiteralExpr))
+    <|> (reserved "c" >> parens (commaSep1 scalarLiteralExpr))
+    <?> "vector constructor"
 
 scalarLiteralExpr =
         numberLiteralExpr
@@ -66,18 +66,10 @@ scalarLiteralExpr =
     <|> naLiteralExpr
     <?> "scalar literal"
 
-
-numberLiteralExpr = do
-    lexNumber >>= return . SNum
-
-stringLiteralExpr =
-    lexString >>= return . SStr
-
-boolLiteralExpr =
-    lexBool >>= return . SLog
-
-naLiteralExpr =
-    reserved "NA" >> return SNa
+numberLiteralExpr = lexNumber >>= return . SNum
+stringLiteralExpr = lexString >>= return . SStr
+boolLiteralExpr   = lexBool   >>= return . SLog
+naLiteralExpr     = reserved "NA" >> return SNa
 
 opTable =
     [ [ vopl ":" BinOpEllipses
