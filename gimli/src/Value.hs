@@ -10,7 +10,9 @@ module Value (
 
 import Control.Monad
 import Data.Maybe
+import Text.ParserCombinators.Parsec (parse)
 
+import Lexer  -- for number parsing
 import PPrint
 
 data Value
@@ -53,6 +55,9 @@ toSStr x             = SStr (pp x)
 
 toSNum sn@(SNum _)   = sn
 toSNum (SLog True)   = SNum 1.0
+toSNum (SStr s)
+    | Just n <- strToNum s
+                     = SNum n
 toSNum _             = SNum 0.0
 
 toSLog sl@(SLog _)   = sl
@@ -60,6 +65,11 @@ toSLog (SNum 1.0)    = SLog True
 toSLog (SStr "TRUE") = SLog True
 toSLog (SStr "T")    = SLog True
 toSLog _             = SLog False
+
+strToNum s =
+    case parse (whiteSpace >> lexNumber) "" s of
+        Right n -> Just n
+        _       -> Nothing
 
 
 -- ============================================================================
