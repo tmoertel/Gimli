@@ -27,7 +27,7 @@ expr =
 
 selectExpr = (<?> "selection") $ do
     target  <- infixExpr
-    selects <- many1 (brackets expr)
+    selects <- try $ many1 (brackets expr)
     return $ foldl1 ESelect (target:selects)
 
 projectExpr = (<?> "projection") $ do
