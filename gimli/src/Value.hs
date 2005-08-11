@@ -1,22 +1,32 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Value (
+    Identifier,
     Value(..),
+    vIsVector, vIsTable,
     Scalar(..), toSNum,
     Vector(..), ToVector(..),
         vlen, vtype, vlist, vectorCoerce, vecNum, mkVector,
-    VecType(..)
+        VecType(..),
+    Table(..), mkTable,
 ) where
 
 import Control.Monad
+import Data.Array
+import qualified Data.Map as Map
+import Data.List (intersperse, sortBy)
 import Data.Maybe
 import Text.ParserCombinators.Parsec (parse)
 
+import DataMapRead
 import Lexer  -- for number parsing
 import PPrint
 
+type Identifier = String
+
 data Value
   = VVector Vector
+  | VTable Table
   | VNull   
   | VError String
     deriving (Read, Show, Ord, Eq)
@@ -25,8 +35,14 @@ instance PPrint Value where
     toDoc (VVector v) = toDoc v
     toDoc VNull       = text "NULL"
     toDoc (VError s)  = text $ "error: " ++ s
+    toDoc (VTable t)  = toDoc t
 --    toDoc x           = error $ "don't know how to pp " ++ show x
 
+vIsVector (VVector _) = True
+vIsVector _           = False
+
+vIsTable (VTable _)   = True
+vIsTable _            = False
 
 -- ============================================================================
 -- scalars
@@ -127,3 +143,55 @@ vtCoerce VTLog x  = Just . keepNas toSLog $ x
 
 keepNas f SNa = SNa
 keepNas f s   = f s
+
+
+-- ============================================================================
+-- tables
+-- ============================================================================
+
+data Table = T { tcols   :: Array Int Identifier
+               , tvecs   :: Array Int Vector
+               , tlookup :: Map.Map Identifier Int
+               }
+             deriving (Read, Show, Eq, Ord)
+
+mkTable :: [(Identifier, Vector)] -> Table
+mkTable colspecs =
+    T cols vecs lookup
+  where
+    cols   = listArray (1, len) (map fst colspecs)
+    vecs   = listArray (1, len) (map snd colspecs)
+    lookup = Map.fromList (zip (elems cols) [1..])
+    len    = length colspecs
+
+class ColumnIdentifier a where
+    toIndex :: Table -> a -> Int
+instance ColumnIdentifier Double where
+    toIndex _ n = round n
+instance ColumnIdentifier String where
+    toIndex (T _ _ lut) s = fromJust (Map.lookup s lut)
+
+instance PPrint Table where
+    toDoc = vcat . map text . lines . ppTable
+
+ppTable (T ns vs _) =
+    unlines $
+    foldr (zipWith (++)) (repeat "") $
+    intersperse (repeat " ") $
+    map fillRight $
+    ("" : take rowlen (map show [1..])) : zipWith (:) ordns ppvecs
+  where
+    ordns  = elems ns
+    ppvecs = map (map pp . vlist) $ elems vs
+    rowlen = vlen (vs ! 1)
+
+sndOrd a b = snd a `compare` snd b
+
+fillRight :: [String] -> [String]
+fillRight ss =
+    zipWith (++) pads ss
+  where
+    lens  = map length ss
+    fill  = maximum lens
+    pads  = map pad lens
+    pad l = replicate (fill - l) ' '

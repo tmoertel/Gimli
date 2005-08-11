@@ -3,19 +3,18 @@
 -- Pretty printing support
 
 module PPrint (
-    pp, listToDoc,
+    listToDoc,
     module Text.PrettyPrint.HughesPJ,
     PPrint(..)
 ) where
 
 import Text.PrettyPrint.HughesPJ
 
-pp :: PPrint a => a -> String
-pp = render . toDoc
-
 class Show a => PPrint a where
     toDoc :: a -> Doc
     toDoc = text . show
+    pp :: a -> String
+    pp = render . toDoc
 
 listToDoc :: PPrint a => [a] -> Doc
 listToDoc = brackets . cat . punctuate comma . map toDoc

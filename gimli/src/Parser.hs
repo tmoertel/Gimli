@@ -21,6 +21,7 @@ gimlParse =
 expr :: Parser Expr
 expr =
         try selectExpr
+    <|> try projectExpr
     <|> infixExpr
     <?> "expression"
 
@@ -28,6 +29,11 @@ selectExpr = (<?> "selection") $ do
     target  <- infixExpr
     selects <- many1 (brackets expr)
     return $ foldl1 ESelect (target:selects)
+
+projectExpr = (<?> "projection") $ do
+    target <- infixExpr
+    reservedOp "$"
+    pspecExpr >>= return . EProject target
 
 infixExpr = 
     buildExpressionParser opTable factor
@@ -37,7 +43,11 @@ factor =
     <|> parens expr
     <|> vectorExpr
     <|> varExpr
+    <|> tableExpr
     <?> "simple expression"
+
+tableExpr =
+    reserved "table" >> parens (commaSep1 nvpair) >>= return . ETable
 
 varExpr =
     identifier >>= return . EVar
@@ -71,6 +81,13 @@ stringLiteralExpr = lexString >>= return . SStr
 boolLiteralExpr   = lexBool   >>= return . SLog
 naLiteralExpr     = reserved "NA" >> return SNa
 
+
+nvpair = do
+    name <- identifier
+    reservedOp "="
+    val  <- expr
+    return (name, val)
+
 opTable =
     [ [ vopl ":" BinOpEllipses
       ]
@@ -94,3 +111,27 @@ opTable =
     eopr s ctor   = op s ctor AssocRight
     bexp ctor l r = EBinOp ctor l r
     op a f assoc  = (reservedOp a >> return f) `Infix` assoc
+
+-- projection specs
+
+pspecExpr =
+    pspecVector <|> parens pspecTable
+
+pspecVector =
+        (integer >>= return . PSVectorNum . fromInteger)
+    <|> (identifier >>= return . PSVectorName)
+
+pspecTable = do
+    negated <- option False (char '-' >> return True)
+    commaSep1 pspecElem >>= return . PSTable negated
+
+pspecElem = 
+        (integer >>= return . PSENum . fromInteger)
+    <|> pspecNameEqualsExpr
+
+pspecNameEqualsExpr = do
+    name <- identifier
+    colExpr <- option (EVar name) $ do
+        reservedOp "="
+        expr
+    return (PSEExp name colExpr)

@@ -7,7 +7,9 @@ module Eval (
 
 import Control.Monad.Cont
 import Control.Monad.State
+import Data.Array
 import qualified Data.Map as Map
+import Data.List (group)
 import Data.Maybe
 
 import PPrint
@@ -78,13 +80,26 @@ eval (ESelect etarget eselect) = do
     target <- eval etarget
     case target of
         VVector vec -> eval eselect >>= return . VVector . selectVector vec
+        _ -> return . VError $ "selection applies only to tables and vectors"
 
-{-
-eval e
-    = error $ "eval error; could not eval (" ++ show e ++ ")"
--}
+eval (EProject etarget pspec) = do
+    target <- eval etarget
+    case target of
+        VTable table -> return $ project table pspec
+        _            -> return . VError $ "first operand of $ must be a table"
 
--- Select elements _es_ from vector _vec_:
+eval (ETable ecolspecs) = do
+    vvecs <- mapM eval evecs
+    let vecs = [v | VVector v <- vvecs]
+    let vlens = map vlen vecs
+    if all vIsVector vvecs && length (group vlens) == 1
+        then return . VTable $ mkTable (zip names vecs)
+        else return . VError $ "table columns must be vectors of equal length"
+  where
+    names = map fst ecolspecs
+    evecs = map snd ecolspecs
+
+-- select elements _es_ from vector _vec_:
 
 selectVector (V tvtype _ txs) (VVector (V VTNum _ sxs)) =
     V tvtype (length xs) xs
@@ -110,6 +125,13 @@ pull _  _        = SNa
 takeLogical tx (SLog True) = Just tx
 takeLogical _  SNa         = Just SNa
 takeLogical _  _           = Nothing
+
+-- project columns given by 
+
+project table (PSVectorNum n) =
+    VVector $ tvecs table ! n
+
+
 
 -- ============================================================================
 -- binary operations

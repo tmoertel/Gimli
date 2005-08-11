@@ -3,7 +3,7 @@ package RunGimli;
 use Exporter 'import';
 use File::Temp 'tempfile';
 
-our @EXPORT = (qw( run_gimli evals_ok evals_same_ok
+our @EXPORT = (qw( run_gimli evals_ok evals_exact_ok evals_same_ok
                    evals_true_ok evals_false_ok      ));
 
 sub run_gimli {
@@ -35,14 +35,22 @@ sub run_gimli {
     return $results;
 }
 
-sub evals_ok {
+sub evals_base {
     no warnings 'once';
-    my ($expr, $expected_result, $name) = @_;
+    my ($processfn, $expr, $expected_result, $name) = @_;
     my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
     my $result = run_gimli($expr);
-    for ($result) { s/^\s+//s; s/\s+$//s; }  # trim whitespace
+    for ($result) { $processfn->() }
     $test_fn->($result, $expected_result,
                $name || "$expr ==> $expected_result");
+}
+
+sub evals_ok {
+    evals_base( sub { s/^\s+//s; s/\s+$//s }, @_ );
+}
+
+sub evals_exact_ok {
+    evals_base( sub { }, @_ );
 }
 
 sub evals_same_ok {

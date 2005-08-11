@@ -12,8 +12,9 @@ gimlLexer =
       { commentStart    = ""
       , commentEnd      = ""
       , commentLine     = "#"
-      , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"]
-      , reservedOpNames = ["*","/","+","-","==","!=","<-","->",":"]
+      , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"
+                          ,"table"]
+      , reservedOpNames = ["$","*","/","+","-","==","!=","<-","->",":","="]
       }
     )
 
