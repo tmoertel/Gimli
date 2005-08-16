@@ -126,11 +126,14 @@ takeLogical tx (SLog True) = Just tx
 takeLogical _  SNa         = Just SNa
 takeLogical _  _           = Nothing
 
--- project columns given by 
+
+-- projection of table
 
 project table (PSVectorNum n) =
     VVector $ tvecs table ! n
 
+project table (PSVectorName s) =
+    project table (PSVectorNum . fromJust . Map.lookup s $ tlookup table)
 
 
 -- ============================================================================
