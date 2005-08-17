@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 31;
+use Test::More tests => 37;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -163,5 +163,51 @@ evals_exact_ok( "q <- 3; $t; x\$(x=x+q)", <<EOF);
 1 4
 2 5
 3 6
+EOF
+
+# star expands to all columns
+
+evals_exact_ok( "$t; x\$(*)", <<EOF);
+  x  y     z
+1 1 11  TRUE
+2 2 12 FALSE
+3 3 13  TRUE
+EOF
+
+evals_exact_ok( "$t; x\$(*, r=9)", <<EOF);
+  x  y     z r
+1 1 11  TRUE 9
+2 2 12 FALSE 9
+3 3 13  TRUE 9
+EOF
+
+# inverted star expands to no columns
+
+evals_exact_ok( "$t; x\$(-3,*)", <<EOF);
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
+evals_exact_ok( "$t; x\$(-*,z)", <<EOF);
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
+evals_exact_ok( "$t; x\$(-*,*,*,*,z=x)", <<EOF);
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
+evals_exact_ok( "$t; x\$(-2,*,3)", <<EOF);
+  x
+1 1
+2 2
+3 3
 EOF
 

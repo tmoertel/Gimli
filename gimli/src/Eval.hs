@@ -142,7 +142,7 @@ project table (PSVectorName s) =
 project table (PSTable True pscols) = do
     ((return . VError) `either` (project table . PSTable False)) =<<
         runErrorT ( do
-            colIndexes <- mapM getIndex pscols
+            colIndexes <- mapM getIndex (removeStars pscols)
             return . map PSCNum $ range (bounds $ tcols table) \\ colIndexes
             )
   where
@@ -153,14 +153,15 @@ project table (PSTable True pscols) = do
 project table (PSTable False pscols) = do
     env <- gets stEnv -- remember pre-eval environemnt
     result <- return . (VError `either` VTable) =<< runErrorT ( do
-        colNames <- mapM getName pscols
-        colExps  <- mapM getExp pscols
+        colNames <- mapM getName pscols'
+        colExps  <- mapM getExp pscols'
         rows <- lift $ evalRows table colExps
         return $ mkTable $ zip colNames (map toVector $ transpose rows)
         )
     put env -- restore environment
     return result
   where
+    pscols'                = expandStars table pscols
     getName                = pscol id fst
     getExp                 = pscol EVar snd
     pscol f g (PSCNum n)   = tableColumnIndexCheck table n >>=
@@ -178,6 +179,17 @@ evalRows table colExps = do
 bindScalar ident x =
     bind ident (EVal . VVector $ mkVector [x])
 
+removeStars =
+    filter (not . isStar)
+  where
+    isStar PSCStar = True
+    isStar _       = False
+
+expandStars table =
+    concatMap starExpand
+  where
+    starExpand PSCStar = map PSCNum (range . bounds $ tcols table)
+    starExpand x       = [x]
 
 -- ============================================================================
 -- binary operations

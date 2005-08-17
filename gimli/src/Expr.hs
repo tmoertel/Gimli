@@ -39,4 +39,5 @@ data PSpec  = PSTable Bool [PSCol]    -- ^ build a new table by spec
 data PSCol  = PSCNum Int              -- ^ column number
             | PSCName Identifier      -- ^ column name
             | PSCExp Identifier Expr  -- ^ ident=expr
+            | PSCStar                 -- ^ "star" for all columns
             deriving (Read, Show, Eq, Ord)

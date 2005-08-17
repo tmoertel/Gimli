@@ -128,6 +128,7 @@ pspecTable = do
 pspecElem = 
         (integer >>= return . PSCNum . fromInteger)
     <|> pspecNameEqualsExpr
+    <|> (reservedOp "*" >> return PSCStar)
 
 pspecNameEqualsExpr = do
     name <- identifier
