@@ -101,10 +101,14 @@ cross (f, g)  = pair (f . fst, g . snd)
 
 -- System commands
 
+handleStd = handle (\e -> putStrLn $ "an error occurred: " ++ show e)
+
 sysCommands =
     [ (":quit",    sysQuit)
     , (":?",       sysHelp)
     , (":inspect", sysInspect)
+    , (":freeze",  sysFreeze)
+    , (":thaw",    sysThaw)
     ]
 
 sysQuit _ =
@@ -116,6 +120,25 @@ sysHelp _ =
 
 sysInspect =
     liftIO . putStrLn . either show pp . parse . skipToArgs
+
+sysFreeze cmd = do
+    stRep <- gets stEvalState >>= return . show
+    liftIO . handleStd $ do
+        writeFile (head . words . skipToArgs $ cmd) (stRep ++ "\n")
+        putStrLn $ "wrote state " ++ bytes stRep
+
+sysThaw cmd = do
+    result <- liftIO . try $ do
+        stRep <- readFile (head . words . skipToArgs $ cmd)
+        st    <- evaluate (read stRep)
+        return (stRep, st)
+    case result of
+        Left e -> liftIO . handleStd $ throw e
+        Right (stRep, st) -> do
+            putEvalState st
+            liftIO $ putStrLn $ "read state " ++ bytes stRep
+
+bytes s = "(" ++ show (length s) ++ ")"
 
 parse =
     Parser.gimlParse "input"

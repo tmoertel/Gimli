@@ -26,7 +26,7 @@ clExp (_,v,x) = x
 nullClosure = (emptyEnv, VNull, Nothing)
 
 type EnvMap     = Map.Map Identifier Closure
-data Env        = Env EnvMap
+data Env        = Env EnvMap deriving (Read, Show, Eq, Ord)
 
 emptyEnv :: Env
 emptyEnv  = Env Map.empty
