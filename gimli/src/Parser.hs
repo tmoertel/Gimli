@@ -126,12 +126,11 @@ pspecTable = do
     commaSep1 pspecElem >>= return . PSTable negated
 
 pspecElem = 
-        (integer >>= return . PSENum . fromInteger)
+        (integer >>= return . PSCNum . fromInteger)
     <|> pspecNameEqualsExpr
 
 pspecNameEqualsExpr = do
     name <- identifier
-    colExpr <- option (EVar name) $ do
+    option (PSCName name) $ do
         reservedOp "="
-        expr
-    return (PSEExp name colExpr)
+        expr >>= return . PSCExp name

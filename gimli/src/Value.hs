@@ -8,13 +8,15 @@ module Value (
     Vector(..), ToVector(..),
         vlen, vtype, vlist, vectorCoerce, vecNum, mkVector,
         VecType(..),
-    Table(..), mkTable,
+    Table(..),
+        mkTable, tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
 ) where
 
 import Control.Monad
+import Control.Monad.Error
 import Data.Array
 import qualified Data.Map as Map
-import Data.List (intersperse, sortBy)
+import Data.List (intersperse, sortBy, transpose)
 import Data.Maybe
 import Text.ParserCombinators.Parsec (parse)
 
@@ -109,11 +111,15 @@ vtype :: Vector -> VecType
 vtype (V t _ _) = t
 
 vlist :: Vector -> [Scalar]
-vlist (V _ _ xs) = xs 
+vlist (V _ _ xs) = xs
 
 class    ToVector a        where toVector :: a -> Vector
 instance ToVector Scalar   where toVector x = mkVector [x]
 instance ToVector [Scalar] where toVector   = mkVector
+instance ToVector [Value]  where toVector   = mkVector . map toScalar
+
+toScalar (VVector (V _ _ (x:_))) = x
+toScalar _                       = SNa
 
 mkVector :: [Scalar] -> Vector
 mkVector xs = mkVectorOfType (foldl vtPromote VTLog xs) xs
@@ -155,6 +161,10 @@ data Table = T { tcols   :: Array Int Identifier
                }
              deriving (Read, Show, Eq, Ord)
 
+trows = transpose . map vlist . elems . tvecs
+
+tcnames = elems . tcols
+
 mkTable :: [(Identifier, Vector)] -> Table
 mkTable colspecs =
     T cols vecs lookup
@@ -195,3 +205,19 @@ fillRight ss =
     fill  = maximum lens
     pads  = map pad lens
     pad l = replicate (fill - l) ' '
+
+tableColumnIndexCheck table n =
+    if inRange bnds n then return n else throwError msg
+  where
+    bnds = bounds (tvecs table)
+    msg  = "column index " ++ show n
+                           ++ " is out of range " ++ showRange bnds
+
+showRange (l,h) = "[" ++ show l ++ "," ++ show h ++ "]"
+
+tableColumnLookupIndex table s =
+    (throwError msg `maybe` return) $
+    Map.lookup s (tlookup table)
+  where
+    msg = "column name \"" ++ s ++ "\" does not exist"
+

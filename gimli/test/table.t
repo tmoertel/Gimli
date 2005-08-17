@@ -3,16 +3,15 @@
 use warnings;
 use strict;
 
-use Test::More tests => 17;
+use Test::More tests => 31;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
 
-#==============================================================================
-# tests
-#==============================================================================
 
+#==============================================================================
 # table constuction
+#==============================================================================
 
 evals_exact_ok( "table(x=5)", <<EOF );
   x
@@ -34,9 +33,13 @@ EOF
 evals_ok( "table(x=1,y=11:13)", qr/error/ );
 
 
+#==============================================================================
 # vector projection
+#==============================================================================
 
 my $t = "x <- table(x=1:3,y=11:13,z=c(T,F,T))";
+
+# by column number
 
 evals_ok( "$t; x\$1", "[1,2,3]" );
 evals_ok( "$t; x\$2", "[11,12,13]" );
@@ -44,13 +47,44 @@ evals_ok( "$t; x\$3", "[TRUE,FALSE,TRUE]" );
 evals_ok( "$t; x\$0", qr/out of range/ );
 evals_ok( "$t; x\$4", qr/out of range/ );
 
+# by column name
+
 evals_ok( "$t; x\$x", "[1,2,3]" );
 evals_ok( "$t; x\$y", "[11,12,13]" );
 evals_ok( "$t; x\$z", "[TRUE,FALSE,TRUE]" );
-evals_ok( "$t; x\$foo", qr/nonexistent column/ );
+evals_ok( "$t; x\$foo", qr/column name .* does not exist/ );
 
 
+#==============================================================================
 # table projection
+#==============================================================================
+
+evals_ok( "$t; y <- 4; x\$(y=3); y", 4 );
+
+# check for non-existent column names
+
+evals_ok( "$t; x\$(foo)", qr/column name .* does not exist/ );
+evals_ok( "$t; x\$(-foo)", qr/column name .* does not exist/ );
+evals_ok( "$t; x\$(x,foo)", qr/column name .* does not exist/ );
+evals_ok( "$t; x\$(-x,foo)", qr/column name .* does not exist/ );
+
+# by column number
+
+evals_exact_ok( "$t; x\$(1)", <<EOF);
+  x
+1 1
+2 2
+3 3
+EOF
+
+evals_exact_ok( "$t; x\$(1,2)", <<EOF);
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
+# by column name
 
 evals_exact_ok( "$t; x\$(x)", <<EOF);
   x
@@ -66,7 +100,7 @@ evals_exact_ok( "$t; x\$(x,y)", <<EOF);
 3 3 13
 EOF
 
-evals_exact_ok( "$t; x\$(y,x)", <<EOF);
+evals_exact_ok( "$t; x\$(y,x=x)", <<EOF);
    y x
 1 11 1
 2 12 2
@@ -79,3 +113,55 @@ evals_exact_ok( "$t; x\$(z=x+20,C2=y-10)", <<EOF);
 2 22  2
 3 23  3
 EOF
+
+# inverted
+
+evals_exact_ok( "$t; x\$(-3)", <<EOF);
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
+evals_exact_ok( "$t; x\$(-z)", <<EOF);
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
+evals_exact_ok( "$t; x\$(-z=x)", <<EOF);
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
+evals_exact_ok( "$t; x\$(-2,3)", <<EOF);
+  x
+1 1
+2 2
+3 3
+EOF
+
+evals_exact_ok( "$t; x\$(-y,z)", <<EOF);
+  x
+1 1
+2 2
+3 3
+EOF
+
+evals_exact_ok( "$t; x\$(x = y==12)", <<EOF);
+      x
+1 FALSE
+2  TRUE
+3 FALSE
+EOF
+
+evals_exact_ok( "q <- 3; $t; x\$(x=x+q)", <<EOF);
+  x
+1 4
+2 5
+3 6
+EOF
+

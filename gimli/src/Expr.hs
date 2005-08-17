@@ -3,7 +3,7 @@
 module Expr (
     Expr(..),
     BinOp(..),
-    PSpec(..), PSElem(..),
+    PSpec(..), PSCol(..),
     module Value
 )
 where
@@ -32,10 +32,11 @@ instance PPrint Expr
 -- projection specs
 -- ============================================================================
 
-data PSpec  = PSTable Bool [PSElem]   -- ^ build a new table by spec
+data PSpec  = PSTable Bool [PSCol]    -- ^ build a new table by spec
             | PSVectorName Identifier -- ^ extract vector by column name
             | PSVectorNum Int         -- ^ extract vector by column number
             deriving (Read, Show, Eq, Ord)
-data PSElem = PSENum Int              -- ^ column number
-            | PSEExp Identifier Expr  -- ^ ident=expr
+data PSCol  = PSCNum Int              -- ^ column number
+            | PSCName Identifier      -- ^ column name
+            | PSCExp Identifier Expr  -- ^ ident=expr
             deriving (Read, Show, Eq, Ord)

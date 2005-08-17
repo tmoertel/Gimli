@@ -6,10 +6,12 @@ module Eval (
 ) where
 
 import Control.Monad.Cont
+import Control.Monad.Error
 import Control.Monad.State
 import Data.Array
+import Data.Either
+import Data.List (group, transpose, (\\))
 import qualified Data.Map as Map
-import Data.List (group)
 import Data.Maybe
 
 import PPrint
@@ -85,7 +87,7 @@ eval (ESelect etarget eselect) = do
 eval (EProject etarget pspec) = do
     target <- eval etarget
     case target of
-        VTable table -> return $ project table pspec
+        VTable table -> project table pspec
         _            -> return . VError $ "first operand of $ must be a table"
 
 eval (ETable ecolspecs) = do
@@ -129,20 +131,53 @@ takeLogical _  _           = Nothing
 
 -- projection of table
 
-project table (PSVectorNum n)
-    | inRange bnds n = VVector $ tvecs table ! n
-    | otherwise      = VError $  "column index " ++ show n
-                              ++ " is out of range " ++ showRange bnds
-  where
-    cols = tvecs table
-    bnds = bounds cols
+project table (PSVectorNum n) =
+    return . (VError `either` (VVector . (tvecs table !))) $
+    tableColumnIndexCheck table n
 
 project table (PSVectorName s) =
-    maybe err (project table . PSVectorNum) . Map.lookup s $ tlookup table
-  where
-    err = VError $ "cannot project on nonexistent column \"" ++ s ++ "\""
+    ((return . VError) `either` (project table . PSVectorNum)) $
+    tableColumnLookupIndex table s
 
-showRange (l,h) = "[" ++ show l ++ "," ++ show h ++ "]"
+project table (PSTable True pscols) = do
+    ((return . VError) `either` (project table . PSTable False)) =<<
+        runErrorT ( do
+            colIndexes <- mapM getIndex pscols
+            return . map PSCNum $ range (bounds $ tcols table) \\ colIndexes
+            )
+  where
+    getIndex (PSCNum n)   = tableColumnIndexCheck table n
+    getIndex (PSCName s)  = tableColumnLookupIndex table s
+    getIndex (PSCExp s _) = tableColumnLookupIndex table s
+
+project table (PSTable False pscols) = do
+    env <- gets stEnv -- remember pre-eval environemnt
+    result <- return . (VError `either` VTable) =<< runErrorT ( do
+        colNames <- mapM getName pscols
+        colExps  <- mapM getExp pscols
+        rows <- lift $ evalRows table colExps
+        return $ mkTable $ zip colNames (map toVector $ transpose rows)
+        )
+    put env -- restore environment
+    return result
+  where
+    getName                = pscol id fst
+    getExp                 = pscol EVar snd
+    pscol f g (PSCNum n)   = tableColumnIndexCheck table n >>=
+                             return . f . (tcols table !)
+    pscol f g (PSCName s)  = tableColumnLookupIndex table s >>=
+                             pscol f g . PSCNum
+    pscol f g (PSCExp s e) = return $ g (s,e)
+
+evalRows table colExps = do
+    mapM projectRow (trows table)
+  where
+    projectRow r = bindCols r >> mapM eval colExps
+    bindCols     = zipWithM bindScalar (tcnames table)
+
+bindScalar ident x =
+    bind ident (EVal . VVector $ mkVector [x])
+
 
 -- ============================================================================
 -- binary operations
