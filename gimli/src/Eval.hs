@@ -129,12 +129,20 @@ takeLogical _  _           = Nothing
 
 -- projection of table
 
-project table (PSVectorNum n) =
-    VVector $ tvecs table ! n
+project table (PSVectorNum n)
+    | inRange bnds n = VVector $ tvecs table ! n
+    | otherwise      = VError $  "column index " ++ show n
+                              ++ " is out of range " ++ showRange bnds
+  where
+    cols = tvecs table
+    bnds = bounds cols
 
 project table (PSVectorName s) =
-    project table (PSVectorNum . fromJust . Map.lookup s $ tlookup table)
+    maybe err (project table . PSVectorNum) . Map.lookup s $ tlookup table
+  where
+    err = VError $ "cannot project on nonexistent column \"" ++ s ++ "\""
 
+showRange (l,h) = "[" ++ show l ++ "," ++ show h ++ "]"
 
 -- ============================================================================
 -- binary operations

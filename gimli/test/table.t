@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 14;
+use Test::More tests => 17;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -41,10 +41,13 @@ my $t = "x <- table(x=1:3,y=11:13,z=c(T,F,T))";
 evals_ok( "$t; x\$1", "[1,2,3]" );
 evals_ok( "$t; x\$2", "[11,12,13]" );
 evals_ok( "$t; x\$3", "[TRUE,FALSE,TRUE]" );
+evals_ok( "$t; x\$0", qr/out of range/ );
+evals_ok( "$t; x\$4", qr/out of range/ );
 
 evals_ok( "$t; x\$x", "[1,2,3]" );
 evals_ok( "$t; x\$y", "[11,12,13]" );
 evals_ok( "$t; x\$z", "[TRUE,FALSE,TRUE]" );
+evals_ok( "$t; x\$foo", qr/nonexistent column/ );
 
 
 # table projection
