@@ -39,7 +39,9 @@ smokeloop:
 
 .PHONY: wc
 wc:
-	find . -type f | egrep -v '/app/|~|.o$$|.hi$$' | xargs wc -l
+	find . -type f | \
+	egrep -v '/$(app_dir)/|/$(dist_dir)/|~|.o$$|.hi$$' | \
+	xargs wc -l
 
 .PHONY: clean
 clean:
