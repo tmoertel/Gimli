@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 45;
+use Test::More tests => 46;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -231,6 +231,12 @@ EOF
 evals_exact_ok( "$t; x[y==12]", <<EOF);
   x  y     z
 1 2 12 FALSE
+EOF
+
+evals_exact_ok( "$t; x[y!=12]", <<EOF);
+  x  y    z
+1 1 11 TRUE
+2 3 13 TRUE
 EOF
 
 evals_exact_ok( "$t; x[z]", <<EOF);
