@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 37;
+use Test::More tests => 45;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -60,6 +60,7 @@ evals_ok( "$t; x\$foo", qr/column name .* does not exist/ );
 #==============================================================================
 
 evals_ok( "$t; y <- 4; x\$(y=3); y", 4 );
+evals_ok( "$t; y <- 4; x\$(y=3,z=nosuchcolumn); y", 4 );
 
 # check for non-existent column names
 
@@ -211,3 +212,44 @@ evals_exact_ok( "$t; x\$(-2,*,3)", <<EOF);
 3 3
 EOF
 
+
+#==============================================================================
+# table selection
+#==============================================================================
+
+evals_exact_ok( "$t; x[T]", <<EOF);
+  x  y     z
+1 1 11  TRUE
+2 2 12 FALSE
+3 3 13  TRUE
+EOF
+
+evals_exact_ok( "$t; x[F]", <<EOF);
+ x y z
+EOF
+
+evals_exact_ok( "$t; x[y==12]", <<EOF);
+  x  y     z
+1 2 12 FALSE
+EOF
+
+evals_exact_ok( "$t; x[z]", <<EOF);
+  x  y    z
+1 1 11 TRUE
+2 3 13 TRUE
+EOF
+
+evals_exact_ok( "$t; x[x<-T]", <<EOF);
+  x  y     z
+1 1 11  TRUE
+2 2 12 FALSE
+3 3 13  TRUE
+EOF
+
+evals_exact_ok( "t <- table(x=1:3,y=[NA,1,3]); t[y==1]", <<EOF);
+   x  y
+1 NA NA
+2  2  1
+EOF
+
+evals_ok( "$t; y<-4; x[y<-F]; y", 4);

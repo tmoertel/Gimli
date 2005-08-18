@@ -4,9 +4,9 @@ module Value (
     Identifier,
     Value(..),
     vIsVector, vIsTable,
-    Scalar(..), toSNum,
+    Scalar(..), toScalar, toSNum, toSLog, keepNAs,
     Vector(..), ToVector(..),
-        vlen, vtype, vlist, vectorCoerce, vecNum, mkVector,
+        vlen, vtype, vlist, vectorCoerce, vecNum, mkVector, mkVectorOfType,
         VecType(..),
     Table(..),
         mkTable, tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
@@ -143,12 +143,12 @@ vtPromote _     (SLog _)  = VTLog
 vtPromote t     _         = t
 
 vtCoerce _ SNull  = Nothing
-vtCoerce VTStr x  = Just . keepNas toSStr $ x
-vtCoerce VTNum x  = Just . keepNas toSNum $ x
-vtCoerce VTLog x  = Just . keepNas toSLog $ x
+vtCoerce VTStr x  = Just . keepNAs toSStr $ x
+vtCoerce VTNum x  = Just . keepNAs toSNum $ x
+vtCoerce VTLog x  = Just . keepNAs toSLog $ x
 
-keepNas f SNa = SNa
-keepNas f s   = f s
+keepNAs f SNa = SNa
+keepNAs f s   = f s
 
 
 -- ============================================================================

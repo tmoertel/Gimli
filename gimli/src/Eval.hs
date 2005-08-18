@@ -81,7 +81,8 @@ eval (ESeries es)
 eval (ESelect etarget eselect) = do
     target <- eval etarget
     case target of
-        VVector vec -> eval eselect >>= return . VVector . selectVector vec
+        VVector vec  -> eval eselect >>= return . VVector . selectVector vec
+        VTable table -> select table eselect
         _ -> return . VError $ "selection applies only to tables and vectors"
 
 eval (EProject etarget pspec) = do
@@ -127,6 +128,30 @@ pull _  _        = SNa
 takeLogical tx (SLog True) = Just tx
 takeLogical _  SNa         = Just SNa
 takeLogical _  _           = Nothing
+
+
+-- selection of table
+
+select table expr = do
+    env <- gets stEnv
+    result <- (return . (VError `either` VTable)) =<< runErrorT ( do
+        selections <- lift $ evalRows table [expr] >>= return . map head
+        vecs' <- mapM (liftM catMaybes . zipWithM sel1 selections . vlist) vecs
+        return $ table { tvecs = listArray (bounds tvts) $
+                                 zipWith mkVectorOfType origTypes vecs' }
+        )
+    put env
+    return result
+  where
+    tvts      = tvecs table
+    vecs      = elems tvts
+    origTypes = map vtype vecs
+
+sel1 val x =
+    return $ case keepNAs toSLog $ toScalar val of
+        SLog False -> Nothing
+        SLog True  -> Just x
+        _          -> Just SNa
 
 
 -- projection of table
