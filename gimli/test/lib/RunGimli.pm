@@ -37,6 +37,7 @@ sub run_gimli {
 
 sub evals_base {
     no warnings 'once';
+    local $Test::Builder::Level = 3;
     my ($processfn, $expr, $expected_result, $name) = @_;
     my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
     my $result = run_gimli($expr);
