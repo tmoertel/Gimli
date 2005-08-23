@@ -61,12 +61,12 @@ sub evals_same_ok {
 
 sub evals_true_ok {
     my ($expr, $name) = @_;
-    evals_ok($expr, "TRUE", $name);
+    evals_ok($expr, "T", $name);
 }
 
 sub evals_false_ok {
     my ($expr, $name) = @_;
-    evals_ok($expr, "FALSE", $name);
+    evals_ok($expr, "F", $name);
 }
 
 

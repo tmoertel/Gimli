@@ -35,10 +35,10 @@ evals_ok( '"\o101"', '"A"' );  # oct escape
 
 # bool literals
 
-evals_same_ok( "TRUE" );
-evals_same_ok( "FALSE" );
-evals_ok( "T", "TRUE" );
-evals_ok( "F", "FALSE" );
+evals_same_ok( "T" );
+evals_same_ok( "F" );
+evals_ok( "TRUE" , "T" );
+evals_ok( "FALSE", "F" );
 
 # equality tests
 
@@ -57,7 +57,7 @@ evals_false_ok( 'T == 1' );
 # parens
 
 evals_ok( "((((((1))))))", 1 );
-evals_ok( "(((T)))", "TRUE" );
+evals_true_ok( "(((T)))" );
 evals_true_ok( "(FALSE==F) == T" );
 evals_true_ok( "FALSE == (F==T)" );
 
@@ -98,7 +98,7 @@ evals_ok( "1.a", qr/error/ );
 
 # not
 
-evals_ok( "!T"       , "FALSE" );
-evals_ok( "![T,F]"   , "[FALSE,TRUE]" );
-evals_ok( "![T,NA,F]", "[FALSE,NA,TRUE]" );
+evals_ok( "!T"       , "F" );
+evals_ok( "![T,F]"   , "[F,T]" );
+evals_ok( "![T,NA,F]", "[F,NA,T]" );
 evals_ok( "!NULL",   , qr/error/ );

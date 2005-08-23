@@ -43,7 +43,7 @@ my $t = "x <- table(x=1:3,y=11:13,z=c(T,F,T))";
 
 evals_ok( "$t; x\$1", "[1,2,3]" );
 evals_ok( "$t; x\$2", "[11,12,13]" );
-evals_ok( "$t; x\$3", "[TRUE,FALSE,TRUE]" );
+evals_ok( "$t; x\$3", "[T,F,T]" );
 evals_ok( "$t; x\$0", qr/out of range/ );
 evals_ok( "$t; x\$4", qr/out of range/ );
 
@@ -51,7 +51,7 @@ evals_ok( "$t; x\$4", qr/out of range/ );
 
 evals_ok( "$t; x\$x", "[1,2,3]" );
 evals_ok( "$t; x\$y", "[11,12,13]" );
-evals_ok( "$t; x\$z", "[TRUE,FALSE,TRUE]" );
+evals_ok( "$t; x\$z", "[T,F,T]" );
 evals_ok( "$t; x\$foo", qr/column name .* does not exist/ );
 
 
@@ -153,10 +153,10 @@ evals_exact_ok( "$t; x\$(-y,z)", <<EOF);
 EOF
 
 evals_exact_ok( "$t; x\$(x = y==12)", <<EOF);
-      x
-1 FALSE
-2  TRUE
-3 FALSE
+  x
+1 F
+2 T
+3 F
 EOF
 
 evals_exact_ok( "q <- 3; $t; x\$(x=x+q)", <<EOF);
@@ -169,17 +169,17 @@ EOF
 # star expands to all columns
 
 evals_exact_ok( "$t; x\$(*)", <<EOF);
-  x  y     z
-1 1 11  TRUE
-2 2 12 FALSE
-3 3 13  TRUE
+  x  y z
+1 1 11 T
+2 2 12 F
+3 3 13 T
 EOF
 
 evals_exact_ok( "$t; x\$(*, r=9)", <<EOF);
-  x  y     z r
-1 1 11  TRUE 9
-2 2 12 FALSE 9
-3 3 13  TRUE 9
+  x  y z r
+1 1 11 T 9
+2 2 12 F 9
+3 3 13 T 9
 EOF
 
 # inverted star expands to no columns
@@ -218,10 +218,10 @@ EOF
 #==============================================================================
 
 evals_exact_ok( "$t; x[T]", <<EOF);
-  x  y     z
-1 1 11  TRUE
-2 2 12 FALSE
-3 3 13  TRUE
+  x  y z
+1 1 11 T
+2 2 12 F
+3 3 13 T
 EOF
 
 evals_exact_ok( "$t; x[F]", <<EOF);
@@ -229,27 +229,27 @@ evals_exact_ok( "$t; x[F]", <<EOF);
 EOF
 
 evals_exact_ok( "$t; x[y==12]", <<EOF);
-  x  y     z
-1 2 12 FALSE
+  x  y z
+1 2 12 F
 EOF
 
 evals_exact_ok( "$t; x[y!=12]", <<EOF);
-  x  y    z
-1 1 11 TRUE
-2 3 13 TRUE
+  x  y z
+1 1 11 T
+2 3 13 T
 EOF
 
 evals_exact_ok( "$t; x[z]", <<EOF);
-  x  y    z
-1 1 11 TRUE
-2 3 13 TRUE
+  x  y z
+1 1 11 T
+2 3 13 T
 EOF
 
 evals_exact_ok( "$t; x[x<-T]", <<EOF);
-  x  y     z
-1 1 11  TRUE
-2 2 12 FALSE
-3 3 13  TRUE
+  x  y z
+1 1 11 T
+2 2 12 F
+3 3 13 T
 EOF
 
 evals_exact_ok( "t <- table(x=1:3,y=[NA,1,3]); t[y==1]", <<EOF);
@@ -273,5 +273,5 @@ evals_exact_ok( "$t; x[x!=2]\$(y)", <<EOF);
 2 13
 EOF
 
-evals_ok( "$t; x\$x + 10 == x\$y"      , "[TRUE,TRUE,TRUE]" );
-evals_ok( "$t; x[z]\$x + 10 == x[z]\$y", "[TRUE,TRUE]" );
+evals_ok( "$t; x\$x + 10 == x\$y"      , "[T,T,T]" );
+evals_ok( "$t; x[z]\$x + 10 == x[z]\$y", "[T,T]" );

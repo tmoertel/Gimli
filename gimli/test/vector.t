@@ -24,19 +24,19 @@ evals_ok( "c(1)", 1 );
 
 # elements of a vector are coerced into like types
 
-evals_ok( '["s",1,T,F]', '["s","1","TRUE","FALSE"]' );  # string trumps all
+evals_ok( '["s",1,T,F]', '["s","1","T","F"]' );  # string trumps all
 evals_ok( '[1,T,F]'    , '[1,1,0]' ); # numeric trumps logical
 
 # arithmetic and comparison ops thread over vectors
 
 evals_ok( "1 + [1,2,3]"         , "[2,3,4]" );
 evals_ok( "[2,3,4] - 1"         , "[1,2,3]" );
-evals_ok( "1 == [0,1,2]"        , "[FALSE,TRUE,FALSE]" );
-evals_ok( "1 != [0,1,2]"        , "[TRUE,FALSE,TRUE]" );
+evals_ok( "1 == [0,1,2]"        , "[F,T,F]" );
+evals_ok( "1 != [0,1,2]"        , "[T,F,T]" );
 evals_ok( "[10,20,30] + [1,2,3]", "[11,22,33]" );
 evals_ok( "[10,20] + [1,2,3]"   , "[11,22,13]" );
-evals_ok( "[0,1,2] == [0,1,2]"  , "[TRUE,TRUE,TRUE]" );
-evals_ok( "[0,1] == [0,1,2]"    , "[TRUE,TRUE,FALSE]" );
+evals_ok( "[0,1,2] == [0,1,2]"  , "[T,T,T]" );
+evals_ok( "[0,1] == [0,1,2]"    , "[T,T,F]" );
 
 # NAs are preserved
 

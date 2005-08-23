@@ -63,7 +63,7 @@ data Scalar     -- ^ scalar value
 instance PPrint Scalar where
     toDoc (SNum x)  = toDoc x
     toDoc (SStr x)  = toDoc x
-    toDoc (SLog b)  = text $ if b then "TRUE" else "FALSE"
+    toDoc (SLog b)  = text $ if b then "T" else "F"
     toDoc  SNa      = text "NA"
 
 
