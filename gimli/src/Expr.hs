@@ -27,7 +27,7 @@ data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
            | BinOpBindL | BinOpBindR | BinOpEllipses
     deriving  (Show, Read, Eq, Ord)
 
-data UnaryOp = UOpNegate
+data UnaryOp = UOpNegate | UOpNot
     deriving (Show, Read, Eq, Ord)
 
 instance PPrint Expr

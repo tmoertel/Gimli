@@ -6,7 +6,8 @@ module Value (
     vIsVector, vIsTable,
     Scalar(..), toScalar, toSNum, toSLog, keepNAs,
     Vector(..), ToVector(..),
-        vlen, vtype, vlist, vectorCoerce, vecNum, mkVector, mkVectorOfType,
+        vlen, vtype, vlist, vmap,
+        vectorCoerce, vecNum, mkVector, mkVectorOfType,
         VecType(..),
     Table(..),
         mkTable, tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
@@ -79,7 +80,8 @@ toSNum (SStr s)
 toSNum _             = SNum 0.0
 
 toSLog sl@(SLog _)   = sl
-toSLog (SNum 1.0)    = SLog True
+toSLog (SNum 0.0)    = SLog False
+toSLog (SNum _)      = SLog True
 toSLog (SStr "TRUE") = SLog True
 toSLog (SStr "T")    = SLog True
 toSLog _             = SLog False
@@ -112,6 +114,9 @@ vtype (V t _ _) = t
 
 vlist :: Vector -> [Scalar]
 vlist (V _ _ xs) = xs
+
+vmap :: (Scalar -> Scalar) -> Vector -> Vector
+vmap f v = mkVector $ map f (vlist v)
 
 class    ToVector a        where toVector :: a -> Vector
 instance ToVector Scalar   where toVector x = mkVector [x]

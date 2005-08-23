@@ -21,7 +21,7 @@ gimlLexer =
       }
     )
 
-gimlOps = words "$ * / + - == != <- -> : = [ ]"
+gimlOps = words "$ * / + ! - == != <- -> : = [ ]"
 
 runLex :: Show a => Parser a -> String -> IO ()
 runLex p input =

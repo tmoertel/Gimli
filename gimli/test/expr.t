@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 53;
+use Test::More tests => 57;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -95,3 +95,10 @@ evals_ok( "+ 1", qr/error/ );
 evals_ok( '"open string', qr/error/ );
 evals_ok( "1.a", qr/error/ );
 # Now NULL: evals_ok( "BLAH", qr/error/ );
+
+# not
+
+evals_ok( "!T"       , "FALSE" );
+evals_ok( "![T,F]"   , "[FALSE,TRUE]" );
+evals_ok( "![T,NA,F]", "[FALSE,NA,TRUE]" );
+evals_ok( "!NULL",   , qr/error/ );

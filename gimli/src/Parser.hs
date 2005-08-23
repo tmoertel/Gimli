@@ -103,6 +103,8 @@ opTable =
     , [ vopl "==" BinOpEq
       , vopl "!=" BinOpNeq
       ]
+    , [ pfop "!" UOpNot
+      ]
     , [ eopr "<-" EBind
       , eopl "->" (flip EBind)
       ]

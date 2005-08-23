@@ -224,7 +224,12 @@ expandStars table =
 -- ============================================================================
 
 uOp :: UnaryOp -> Value -> Value
-uOp UOpNegate = binOp BinOpTimes (VVector negOne)
+uOp UOpNegate x        = binOp BinOpTimes (VVector negOne) x
+uOp UOpNot (VVector x) = VVector . vmap logNot $ vectorCoerce VTLog x
+uOp UOpNot _           = VError $ "operand of (!) must be a vector"
+
+logNot (SLog x) = SLog (not x)
+logNot _        = SNa
 
 negOne = V VTNum 1 [SNum (-1.0)]
 
