@@ -5,18 +5,23 @@ import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as P
 
+import Data.List (nub)
+
 gimlLexer :: P.TokenParser ()
 gimlLexer =
     P.makeTokenParser
-    ( haskellStyle
+    ( emptyDef
       { commentStart    = ""
       , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"
                           ,"table"]
-      , reservedOpNames = ["$","*","/","+","-","==","!=","<-","->",":","="]
+      , reservedOpNames = gimlOps
+      , opLetter        = oneOf . nub $ concatMap tail gimlOps
       }
     )
+
+gimlOps = words "$ * / + - == != <- -> : = [ ]"
 
 runLex :: Show a => Parser a -> String -> IO ()
 runLex p input =
@@ -54,6 +59,8 @@ semi           = glex P.semi
 identifier     = glex P.identifier
 reserved       = glex P.reserved
 reservedOp     = glex P.reservedOp
+operator       = glex P.operator
+charLiteral    = glex P.charLiteral
 stringLiteral  = glex P.stringLiteral
 commaSep1      = glex P.commaSep1
 brackets       = glex P.brackets

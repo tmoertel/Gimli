@@ -2,7 +2,7 @@
 
 module Expr (
     Expr(..),
-    BinOp(..),
+    BinOp(..), UnaryOp(..),
     PSpec(..), PSCol(..),
     module Value
 )
@@ -14,6 +14,7 @@ import PPrint
 data Expr
   = EVal Value
   | EBinOp BinOp Expr Expr
+  | EUOp UnaryOp Expr
   | ESeries [Expr]
   | EVar Identifier
   | EBind Expr Expr
@@ -25,6 +26,9 @@ data Expr
 data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
            | BinOpBindL | BinOpBindR | BinOpEllipses
     deriving  (Show, Read, Eq, Ord)
+
+data UnaryOp = UOpNegate
+    deriving (Show, Read, Eq, Ord)
 
 instance PPrint Expr
 

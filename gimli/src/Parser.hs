@@ -4,7 +4,7 @@ module Parser (
 
 import Data.Either
 import Text.ParserCombinators.Parsec
-import Text.ParserCombinators.Parsec.Expr
+import ExprParser
 
 import Expr
 import Lexer
@@ -20,9 +20,7 @@ gimlParse =
 
 expr :: Parser Expr
 expr =
-        try selectExpr
-    <|> try projectExpr
-    <|> infixExpr
+        infixExpr
     <?> "expression"
 
 selectExpr = (<?> "selection") $ do
@@ -89,7 +87,12 @@ nvpair = do
     return (name, val)
 
 opTable =
-    [ [ vopl ":" BinOpEllipses
+    [ [ pfop "-" UOpNegate
+      ]
+    , [ vopl ":" BinOpEllipses
+      ]
+    , [ sfop "$" EProject pspecExpr
+      , sfop "[" ESelect (expr `followedBy` reservedOp "]")
       ]
     , [ vopl "*" BinOpTimes
       , vopl "/" BinOpDiv
@@ -110,18 +113,23 @@ opTable =
     eopl s ctor   = op s ctor AssocLeft
     eopr s ctor   = op s ctor AssocRight
     bexp ctor l r = EBinOp ctor l r
-    op a f assoc  = (reservedOp a >> return f) `Infix` assoc
+    pfop s ctor   = Prefix (reservedOp s >> return (EUOp ctor))
+    sfop s ctor p = Postfix $ do
+                        lexeme $ string s
+                        x <- p
+                        return $ \t -> ctor t x
+    op a f assoc  = Infix (reservedOp a >> return f) assoc
 
 -- projection specs
 
 pspecExpr =
-    pspecVector <|> parens pspecTable
+    pspecVector <|> pspecTable
 
 pspecVector =
         (integer >>= return . PSVectorNum . fromInteger)
     <|> (identifier >>= return . PSVectorName)
 
-pspecTable = do
+pspecTable = parens $ do
     negated <- option False (char '-' >> return True)
     commaSep1 pspecElem >>= return . PSTable negated
 
@@ -135,3 +143,11 @@ pspecNameEqualsExpr = do
     option (PSCName name) $ do
         reservedOp "="
         expr >>= return . PSCExp name
+
+
+-- helper parser combinators
+
+p `followedBy` f = do
+    v <- p
+    f
+    return v

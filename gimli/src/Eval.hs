@@ -68,6 +68,9 @@ eval (EVar ident)
     = gets stEnv >>=
       return . clVal . Map.findWithDefault nullClosure ident . envMap
 
+eval (EUOp op x)
+    = eval x >>= return . uOp op
+
 eval (EBinOp op l r)
     = do
       lval <- eval l
@@ -215,6 +218,15 @@ expandStars table =
   where
     starExpand PSCStar = map PSCNum (range . bounds $ tcols table)
     starExpand x       = [x]
+
+-- ============================================================================
+-- unary operations
+-- ============================================================================
+
+uOp :: UnaryOp -> Value -> Value
+uOp UOpNegate = binOp BinOpTimes (VVector negOne)
+
+negOne = V VTNum 1 [SNum (-1.0)]
 
 -- ============================================================================
 -- binary operations

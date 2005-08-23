@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 46;
+use Test::More tests => 51;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -259,3 +259,19 @@ evals_exact_ok( "t <- table(x=1:3,y=[NA,1,3]); t[y==1]", <<EOF);
 EOF
 
 evals_ok( "$t; y<-4; x[y<-F]; y", 4);
+
+
+#==============================================================================
+# complex operations
+#==============================================================================
+
+evals_ok( "$t; x[x==2]\$y", 12 );
+evals_ok( "$t; x[x!=2]\$y", "[11,13]" );
+evals_exact_ok( "$t; x[x!=2]\$(y)", <<EOF);
+   y
+1 11
+2 13
+EOF
+
+evals_ok( "$t; x\$x + 10 == x\$y"      , "[TRUE,TRUE,TRUE]" );
+evals_ok( "$t; x[z]\$x + 10 == x[z]\$y", "[TRUE,TRUE]" );
