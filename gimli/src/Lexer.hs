@@ -17,7 +17,10 @@ gimlLexer =
       , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"
                           ,"table"]
       , reservedOpNames = gimlOps
+      , opStart         = oneOf . nub $ head gimlOps
       , opLetter        = oneOf . nub $ concatMap tail gimlOps
+      , identStart      = letter <|> char '.'
+      , identLetter     = alphaNum <|> oneOf "._"
       }
     )
 
