@@ -205,7 +205,7 @@ evalRows table colExps = do
     bindCols     = zipWithM bindScalar (tcnames table)
 
 bindScalar ident x =
-    bind ident (EVal . VVector $ mkVector [x])
+    bind ident (EVal $ mkVectorValue [x])
 
 removeStars =
     filter (not . isStar)
@@ -251,7 +251,7 @@ cmpOp op x y = VVector $ vectorize (propNa (binWrap SLog id op)) x y
 numOp op x y = VVector $ vectorize (propNa (binWrap SNum valNum op)) x y
 
 doEllipses (VVector start) (VVector end) =
-    VVector $ mkVector $ map SNum [ (vecNum start) .. (vecNum end) ]
+    mkVectorValue $ map SNum [ (vecNum start) .. (vecNum end) ]
 doEllipses _ _ =
     VError $ "both operands to the (:) operator must be vectors"
 

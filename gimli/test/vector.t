@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 37;
+use Test::More tests => 38;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -71,3 +71,4 @@ evals_ok( "x <- 1; y <- 3; x:y", "[1,2,3]" );
 evals_ok( "[1,2,3]:[4,5]"      , "[1,2,3,4]" );
 evals_ok( "T:T"                , 1 );
 evals_ok( "F:T"                , "[0,1]" );
+evals_ok( "1:-1"               , "NULL" );

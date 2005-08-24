@@ -6,8 +6,8 @@ module Value (
     vIsVector, vIsTable,
     Scalar(..), toScalar, toSNum, toSLog, keepNAs,
     Vector(..), ToVector(..),
-        vlen, vtype, vlist, vmap,
-        vectorCoerce, vecNum, mkVector, mkVectorOfType,
+        vlen, vtype, vlist, vmap, vnull,
+        vectorCoerce, vecNum, mkVector, mkVectorOfType, mkVectorValue,
         VecType(..),
     Table(..),
         mkTable, tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
@@ -118,6 +118,8 @@ vlist (V _ _ xs) = xs
 vmap :: (Scalar -> Scalar) -> Vector -> Vector
 vmap f v = mkVector $ map f (vlist v)
 
+vnull = null . vlist
+
 class    ToVector a        where toVector :: a -> Vector
 instance ToVector Scalar   where toVector x = mkVector [x]
 instance ToVector [Scalar] where toVector   = mkVector
@@ -125,6 +127,12 @@ instance ToVector [Value]  where toVector   = mkVector . map toScalar
 
 toScalar (VVector (V _ _ (x:_))) = x
 toScalar _                       = SNa
+
+mkVectorValue :: [Scalar] -> Value
+mkVectorValue xs =
+    if vnull v then VNull else VVector v
+  where
+    v = mkVector xs
 
 mkVector :: [Scalar] -> Vector
 mkVector xs = mkVectorOfType (foldl vtPromote VTLog xs) xs

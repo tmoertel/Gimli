@@ -87,30 +87,31 @@ nvpair = do
     return (name, val)
 
 opTable =
-    [ [ pfop "-" UOpNegate
+    [ [ pfop  "-" UOpNegate
       ]
-    , [ vopl ":" BinOpEllipses
+    , [ voplx ":" BinOpEllipses
       ]
-    , [ sfop "$" EProject pspecExpr
-      , sfop "[" ESelect (expr `followedBy` reservedOp "]")
+    , [ sfop  "$" EProject pspecExpr
+      , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
       ]
-    , [ vopl "*" BinOpTimes
-      , vopl "/" BinOpDiv
+    , [ vopl  "*" BinOpTimes
+      , vopl  "/" BinOpDiv
       ]
-    , [ vopl "+" BinOpAdd
-      , vopl "-" BinOpSub
+    , [ vopl  "+" BinOpAdd
+      , vopl  "-" BinOpSub
       ]
-    , [ vopl "==" BinOpEq
-      , vopl "!=" BinOpNeq
+    , [ vopl  "==" BinOpEq
+      , vopl  "!=" BinOpNeq
       ]
-    , [ pfop "!" UOpNot
+    , [ pfop  "!" UOpNot
       ]
-    , [ eopr "<-" EBind
-      , eopl "->" (flip EBind)
+    , [ eopr  "<-" EBind
+      , eopl  "->" (flip EBind)
       ]
     ]
   where
     vopl s ctor   = op s (bexp ctor) AssocLeft
+    voplx s ctor  = opx s (bexp ctor) AssocLeft
     vopr s ctor   = op s (bexp ctor) AssocRight
     eopl s ctor   = op s ctor AssocLeft
     eopr s ctor   = op s ctor AssocRight
@@ -121,6 +122,7 @@ opTable =
                         x <- p
                         return $ \t -> ctor t x
     op a f assoc  = Infix (reservedOp a >> return f) assoc
+    opx a f assoc = Infix (lexeme (string a) >> return f) assoc
 
 -- projection specs
 
