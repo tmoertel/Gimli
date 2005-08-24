@@ -1,14 +1,16 @@
 MANIFEST
 Makefile
+README
 script/smoke
 src/DataMapRead.hs
 src/Eval.hs
 src/Expr.hs
+src/ExprParser.hs
 src/Lexer.hs
 src/Main.hs
 src/Name.hs
-src/PPrint.hs
 src/Parser.hs
+src/PPrint.hs
 src/Value.hs
 src/Version.hs
 test/01-sanity.t
