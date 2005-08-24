@@ -247,7 +247,7 @@ binOp BinOpEllipses = doEllipses
 binOp BinOpEq       = cmpOp (==)
 binOp BinOpNeq      = cmpOp (/=)
 
-cmpOp op x y = VVector $ vectorize (propNa (binWrap SLog id op)) x y
+cmpOp op x y = VVector $ vectorize (propNa ((SLog.) . withBestType op)) x y
 numOp op x y = VVector $ vectorize (propNa (binWrap SNum valNum op)) x y
 
 doEllipses (VVector start) (VVector end) =
@@ -261,6 +261,12 @@ valNum x =
         _      -> error $ "cannot coerce into numeric: (" ++ show x ++ ")"
 
 binWrap wrapper argfn op l r = wrapper (argfn l `op` argfn r)
+
+withBestType :: (Scalar -> Scalar -> a) -> Scalar -> Scalar -> a
+withBestType f l r =
+    f l' r'
+  where
+    [l', r'] = vlist $ toVector [l, r]
 
 propNa _ SNa _   = SNa
 propNa _ _   SNa = SNa

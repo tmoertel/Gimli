@@ -52,7 +52,8 @@ evals_true_ok( "1 != 0" );
 evals_true_ok( '"hi" == "hi"' );
 evals_true_ok( '"hi" != "foo"' );
 evals_false_ok( '"hi" == 1' );
-evals_false_ok( 'T == 1' );
+evals_true_ok( 'T == 1' );
+
 
 # parens
 

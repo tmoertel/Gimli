@@ -8,6 +8,7 @@ module Value (
     Vector(..), ToVector(..),
         vlen, vtype, vlist, vmap, vnull,
         vectorCoerce, vecNum, mkVector, mkVectorOfType, mkVectorValue,
+        bestType,
         VecType(..),
     Table(..),
         mkTable, tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
@@ -135,12 +136,15 @@ mkVectorValue xs =
     v = mkVector xs
 
 mkVector :: [Scalar] -> Vector
-mkVector xs = mkVectorOfType (foldl vtPromote VTLog xs) xs
+mkVector xs = mkVectorOfType (bestType xs) xs
 
 mkVectorOfType :: VecType -> [Scalar] -> Vector
 mkVectorOfType vtype xs = V vtype (length vl) vl
   where
     vl = mapMaybe (vtCoerce vtype) xs
+
+bestType xs =
+    foldl vtPromote VTLog xs
 
 vectorCoerce vtype vec =
     mkVectorOfType vtype (vlist vec)
