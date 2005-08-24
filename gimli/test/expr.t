@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 57;
+use Test::More tests => 73;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -54,6 +54,24 @@ evals_true_ok( '"hi" != "foo"' );
 evals_false_ok( '"hi" == 1' );
 evals_true_ok( 'T == 1' );
 
+# comparisions
+
+evals_false_ok( '0 <  0' );
+evals_true_ok ( '0 <  1' );
+evals_true_ok ( '0 <= 0' );
+evals_true_ok ( '0 <= 1' );
+evals_false_ok( '0 >  0' );
+evals_false_ok( '0 >  1' );
+evals_true_ok ( '0 >= 0' );
+evals_false_ok( '0 >= 1' );
+evals_false_ok( '1 <  0' );
+evals_false_ok( '1 <  1' );
+evals_false_ok( '1 <= 0' );
+evals_true_ok ( '1 <= 1' );
+evals_true_ok ( '1 >  0' );
+evals_false_ok( '1 >  1' );
+evals_true_ok ( '1 >= 0' );
+evals_true_ok ( '1 >= 1' );
 
 # parens
 

@@ -102,6 +102,10 @@ opTable =
       ]
     , [ vopl  "==" BinOpEq
       , vopl  "!=" BinOpNeq
+      , vopl  "<"  BinOpLt
+      , vopl  "<=" BinOpLe
+      , vopl  ">"  BinOpGt
+      , vopl  ">=" BinOpGe
       ]
     , [ pfop  "!" UOpNot
       ]

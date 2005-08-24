@@ -246,6 +246,10 @@ binOp BinOpEllipses = doEllipses
 
 binOp BinOpEq       = cmpOp (==)
 binOp BinOpNeq      = cmpOp (/=)
+binOp BinOpLt       = cmpOp (<)
+binOp BinOpLe       = cmpOp (<=)
+binOp BinOpGt       = cmpOp (>)
+binOp BinOpGe       = cmpOp (>=)
 
 cmpOp op x y = VVector $ vectorize (propNa ((SLog.) . withBestType op)) x y
 numOp op x y = VVector $ vectorize (propNa (binWrap SNum valNum op)) x y

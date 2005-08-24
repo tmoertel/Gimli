@@ -25,6 +25,7 @@ data Expr
 
 data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
            | BinOpBindL | BinOpBindR | BinOpEllipses
+           | BinOpGt | BinOpGe | BinOpLt | BinOpLe
     deriving  (Show, Read, Eq, Ord)
 
 data UnaryOp = UOpNegate | UOpNot
