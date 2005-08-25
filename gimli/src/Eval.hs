@@ -1,7 +1,7 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Eval (
-    eval, evalTop, run, emptyEnv,
+    eval, evalTop, run, emptyEnv, clExp, envMap,
     EvalState
 ) where
 

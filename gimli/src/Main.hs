@@ -6,6 +6,7 @@ import Control.Exception
 import Control.Monad.Cont
 import Control.Monad.State
 import Data.Char
+import qualified Data.Map as Map
 import Data.Maybe
 
 import qualified System.Console.Readline as LE
@@ -106,6 +107,7 @@ handleStd = handle (\e -> putStrLn $ "an error occurred: " ++ show e)
 sysCommands =
     [ (":quit",    sysQuit)
     , (":?",       sysHelp)
+    , (":explain", sysExplain)
     , (":inspect", sysInspect)
     , (":freeze",  sysFreeze)
     , (":thaw",    sysThaw)
@@ -117,6 +119,14 @@ sysQuit _ =
 sysHelp _ =
     liftIO . putStrLn . unlines $
     "Commands I know:" : map (("  " ++) . fst) sysCommands
+
+sysExplain cmd = do
+    est <- gets (Eval.envMap . stEvalState)
+    liftIO . putStrLn . maybe nsvar pp $ Map.lookup varname est >>= Eval.clExp
+  where
+    varname = concat . tail $ words cmd
+    nsvar   = "the variable \"" ++ varname
+              ++ "\" does not exist or has no binding history"
 
 sysInspect =
     liftIO . putStrLn . either show pp . parse . skipToArgs
