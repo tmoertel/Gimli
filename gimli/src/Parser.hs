@@ -27,8 +27,8 @@ gimlParseTable :: MonadError e m => [[String]] -> m Table
 gimlParseTable rows =
     return . mkTable . filter (not . null . fst) $ zip headings vectors
   where
-    cols     = transpose rows
-    headings = map head cols
+    cols     = transpose (map (take $ length headings) rows)
+    headings = head rows
     vectors  = map (mkVector . map parseTableElem . tail) cols
     parseTableElem s =
         either (const (SStr s)) id (gimlReadScalar s)
@@ -64,7 +64,10 @@ tableExpr =
     reserved "table" >> parens (commaSep1 nvpair) >>= return . ETable
 
 loadExpr =
-    reserved "read.csv" >> parens stringLiteral >>= return . EReadCsv
+        loadx "read.csv" EReadCsv
+    <|> loadx "read.wsv" EReadWsv
+  where
+    loadx s ctor = reserved s >> parens stringLiteral >>= return . ctor
 
 varExpr =
     identifier >>= return . EVar

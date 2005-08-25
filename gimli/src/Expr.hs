@@ -22,6 +22,7 @@ data Expr
   | EProject Expr PSpec
   | ETable [(Identifier, Expr)]
   | EReadCsv String
+  | EReadWsv String
   deriving (Show, Read, Eq, Ord)
 
 data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq

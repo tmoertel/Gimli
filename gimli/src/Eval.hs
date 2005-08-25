@@ -96,7 +96,10 @@ eval (EProject etarget pspec) = do
         _            -> return . VError $ "first operand of $ must be a table"
 
 eval (EReadCsv file) =
-    loadCSVTable file
+    loadCsvTable file
+
+eval (EReadWsv file) =
+    loadWsvTable file
 
 eval (ETable ecolspecs) = do
     vvecs <- mapM eval evecs

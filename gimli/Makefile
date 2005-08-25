@@ -6,7 +6,7 @@ app_dir  = app
 src_dir  = src
 dist_dir = dist
 
-hsfiles := $(wildcard $(src_dir)/*.hs)
+hsfiles := $(wildcard $(src_dir)/*.hs $(src_dir)/*/*.hs)
 version := $(shell perl -lne'print $$1 if /([0-9.]+)/' $(src_dir)/Version.hs)
 
 dist_pkg = $(dist_dir)/$(package_name)-$(version)
