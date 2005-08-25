@@ -1,10 +1,12 @@
+{-# OPTIONS -fglasgow-exts #-}
+
 module Parser (
     gimlParse, gimlReadScalar, gimlParseTable
 ) where
 
 import Control.Monad.Error
 import Data.Either
-import Data.List (transpose, filter)
+import Data.List (transpose, filter, group)
 import Text.ParserCombinators.Parsec
 import ExprParser
 
@@ -23,8 +25,10 @@ gimlParse =
 gimlReadScalar =
     parse (whiteSpace >> scalarLiteralExpr) "string"
 
-gimlParseTable :: MonadError e m => [[String]] -> m Table
-gimlParseTable rows =
+gimlParseTable :: MonadError String m => [[String]] -> m Table
+gimlParseTable rows = do
+    unless (length (group (map length cols)) == 1) $
+        throwError "table cannot be parsed: it is non-rectangular"
     return . mkTable . filter (not . null . fst) $ zip headings vectors
   where
     cols     = transpose (map (take $ length headings) rows)

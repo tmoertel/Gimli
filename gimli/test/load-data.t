@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 11;
+use Test::More tests => 13;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -62,6 +62,13 @@ FILE
 1 T 9 F 8
 EXPECTED
 
+# non-rectangular tables are verboten
+
+load_csv_evals_exact_ok( <<FILE, qr/error .* non-rectangular/x );
+x,y
+T
+FILE
+
 
 #==============================================================================
 # WSV tests
@@ -106,6 +113,13 @@ FILE
   x y
 1 T 9
 EXPECTED
+
+# non-rectangular tables are verboten
+
+load_csv_evals_exact_ok( <<FILE, qr/error .* non-rectangular/x );
+x y
+T
+FILE
 
 
 
