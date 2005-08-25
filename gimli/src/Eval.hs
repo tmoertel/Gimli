@@ -45,18 +45,20 @@ type Eval r a    = ContT r (StateT EvalState IO) a
 stEnv = id
 
 bind ident valExpr = do
-    env <- gets stEnv
     val <- eval valExpr
+    env <- gets stEnv
     modify $ modifyEnv $ Map.insert ident (env, val, Just valExpr)
     return val
 
 evalTop :: Expr -> IO Value
 evalTop =
-    (`evalStateT` emptyEnv) . (`runContT` return) . eval
+    (`evalStateT` emptyEnv) . (`runContT` return) . evalL
 
 run :: EvalState -> Expr -> IO (Value, EvalState)
 run st =
-    (`runStateT` st) . (`runContT` return) . eval
+    (`runStateT` st) . (`runContT` return) . evalL
+
+evalL x = eval x >>= bind "LAST" . EVal
 
 eval (EVal v)
     = return v
@@ -80,7 +82,7 @@ eval (EBinOp op l r)
 
 eval (ESeries es)
     | es == []  = return VNull
-    | otherwise = foldr1 (>>) $ map eval es
+    | otherwise = foldr1 (>>) $ map evalL es
 
 eval (ESelect etarget eselect) = do
     target <- eval etarget
