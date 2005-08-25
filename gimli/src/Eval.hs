@@ -16,6 +16,7 @@ import Data.Maybe
 
 import PPrint
 import Expr
+import LoadData
 
 type Closure    = (Env, Value, Maybe Expr)
 
@@ -93,6 +94,9 @@ eval (EProject etarget pspec) = do
     case target of
         VTable table -> project table pspec
         _            -> return . VError $ "first operand of $ must be a table"
+
+eval (EReadCsv file) =
+    loadCSVTable file
 
 eval (ETable ecolspecs) = do
     vvecs <- mapM eval evecs

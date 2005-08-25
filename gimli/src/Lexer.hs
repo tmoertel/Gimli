@@ -15,7 +15,7 @@ gimlLexer =
       , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"
-                          ,"table"]
+                          ,"table", "read.csv"]
       , reservedOpNames = gimlOps
       , opStart         = oneOf . nub $ head gimlOps
       , opLetter        = oneOf . nub $ concatMap tail gimlOps

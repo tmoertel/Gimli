@@ -1,8 +1,10 @@
 module Parser (
-    gimlParse
+    gimlParse, gimlReadScalar, gimlParseTable
 ) where
 
+import Control.Monad.Error
 import Data.Either
+import Data.List (transpose, filter)
 import Text.ParserCombinators.Parsec
 import ExprParser
 
@@ -18,6 +20,19 @@ gimlParse =
             [e] -> e
             _   -> ESeries es
 
+gimlReadScalar =
+    parse (whiteSpace >> scalarLiteralExpr) "string"
+
+gimlParseTable :: MonadError e m => [[String]] -> m Table
+gimlParseTable rows =
+    return . mkTable . filter (not . null . fst) $ zip headings vectors
+  where
+    cols     = transpose rows
+    headings = map head cols
+    vectors  = map (mkVector . map parseTableElem . tail) cols
+    parseTableElem s =
+        either (const (SStr s)) id (gimlReadScalar s)
+        
 expr :: Parser Expr
 expr =
         infixExpr
@@ -42,10 +57,14 @@ factor =
     <|> vectorExpr
     <|> varExpr
     <|> tableExpr
+    <|> loadExpr
     <?> "simple expression"
 
 tableExpr =
     reserved "table" >> parens (commaSep1 nvpair) >>= return . ETable
+
+loadExpr =
+    reserved "read.csv" >> parens stringLiteral >>= return . EReadCsv
 
 varExpr =
     identifier >>= return . EVar

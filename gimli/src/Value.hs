@@ -11,7 +11,8 @@ module Value (
         bestType,
         VecType(..),
     Table(..),
-        mkTable, tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
+        mkTable,
+        tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
 ) where
 
 import Control.Monad
