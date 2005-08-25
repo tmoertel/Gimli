@@ -141,11 +141,11 @@ opTable =
     bexp ctor l r = EBinOp ctor l r
     pfop s ctor   = Prefix (reservedOp s >> return (EUOp ctor))
     sfop s ctor p = Postfix $ do
-                        lexeme $ string s
+                        symbol s
                         x <- p
                         return $ \t -> ctor t x
     op a f assoc  = Infix (reservedOp a >> return f) assoc
-    opx a f assoc = Infix (lexeme (string a) >> return f) assoc
+    opx a f assoc = Infix (symbol a >> return f) assoc
 
 -- projection specs
 
