@@ -37,13 +37,15 @@ sub run_gimli {
 
 sub evals_base {
     no warnings 'once';
-    local $Test::Builder::Level = 3;
     my ($processfn, $expr, $expected_result, $name) = @_;
     my $test_fn = ref $expected_result ? *Test::More::like : *Test::More::is;
     my $result = run_gimli($expr);
     for ($result) { $processfn->() }
-    $test_fn->($result, $expected_result,
-               $name || "$expr ==> $expected_result");
+    my $level = $Test::Builder::Level;
+    {  local $Test::Builder::Level = $level + 2;
+       $test_fn->($result, $expected_result,
+                  $name || "$expr ==> $expected_result");
+    }
 }
 
 sub evals_ok {

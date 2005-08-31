@@ -149,5 +149,8 @@ sub with_file {
     my $tmp = File::Temp->new;
     print $tmp $content;
     local $_ = $tmp->filename;
-    $testfn->();
+    my $level = $Test::Builder::Level;
+    {  local $Test::Builder::Level = $level + 4;
+       $testfn->();
+   }
 }
