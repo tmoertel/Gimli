@@ -42,33 +42,48 @@ sub evals_base {
     my $result = run_gimli($expr);
     for ($result) { $processfn->() }
     my $level = $Test::Builder::Level;
-    {  local $Test::Builder::Level = $level + 2;
+    {  local $Test::Builder::Level = $level + 1;
        $test_fn->($result, $expected_result,
                   $name || "$expr ==> $expected_result");
     }
 }
 
 sub evals_ok {
-    evals_base( sub { s/^\s+//s; s/\s+$//s }, @_ );
+    my $level = $Test::Builder::Level;
+    {   local $Test::Builder::Level = $level + 1;
+        evals_base( sub { s/^\s+//s; s/\s+$//s }, @_ );
+    }
 }
 
 sub evals_exact_ok {
-    evals_base( sub { }, @_ );
+    my $level = $Test::Builder::Level;
+    {   local $Test::Builder::Level = $level + 1;
+        evals_base( sub { }, @_ );
+    }
 }
 
 sub evals_same_ok {
     my ($expr, $name) = @_;
-    evals_ok($expr, $expr, $name);
+    my $level = $Test::Builder::Level;
+    {   local $Test::Builder::Level = $level + 1;
+        evals_ok($expr, $expr, $name);
+    }
 }
 
 sub evals_true_ok {
     my ($expr, $name) = @_;
-    evals_ok($expr, "T", $name);
+    my $level = $Test::Builder::Level;
+    {   local $Test::Builder::Level = $level + 1;
+        evals_ok($expr, "T", $name);
+    }
 }
 
 sub evals_false_ok {
     my ($expr, $name) = @_;
-    evals_ok($expr, "F", $name);
+    my $level = $Test::Builder::Level;
+    {   local $Test::Builder::Level = $level + 1;
+        evals_ok($expr, "F", $name);
+    }
 }
 
 
