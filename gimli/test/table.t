@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 51;
+use Test::More tests => 55;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -275,3 +275,13 @@ EOF
 
 evals_ok( "$t; x\$x + 10 == x\$y"      , "[T,T,T]" );
 evals_ok( "$t; x[z]\$x + 10 == x[z]\$y", "[T,T]" );
+
+
+#==============================================================================
+# column-name uniqueness
+#==============================================================================
+
+evals_ok( "table(x=1,x=1)[F]"      , "x x.1" );
+evals_ok( "table(x=1,x=1,x=1)[F]"  , "x x.1 x.2" );
+evals_ok( "table(x=1,x=1,x.1=1)[F]", "x x.2 x.1" );
+evals_ok( "table(x.1=1,x.1=1)[F]"  , "x.1 x.1.1" );

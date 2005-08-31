@@ -27,6 +27,7 @@ import Text.ParserCombinators.Parsec (parse)
 import DataMapRead
 import Lexer  -- for number parsing
 import PPrint
+import Utils (uniqify)
 
 type Identifier = String
 
@@ -198,7 +199,7 @@ mkTable :: [(Identifier, Vector)] -> Table
 mkTable colspecs =
     T cols vecs lookup
   where
-    cols   = listArray (1, len) (map fst colspecs)
+    cols   = listArray (1, len) (uniqify $ map fst colspecs)
     vecs   = listArray (1, len) (map snd colspecs)
     lookup = Map.fromList (zip (elems cols) [1..])
     len    = length colspecs
