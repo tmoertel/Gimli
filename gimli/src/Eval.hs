@@ -67,7 +67,8 @@ eval (EVal v)
 
 eval (EBind lvalue ev)
     | EVar ident <- lvalue = bind ident ev
-    | otherwise            = error $ "cannot bind to non-lvalue: " ++ pp lvalue
+    | otherwise            = return . VError $
+                             "cannot bind to non-lvalue: " ++ pp lvalue
 
 eval (EVar ident)
     = gets stEnv >>=
@@ -262,8 +263,8 @@ binOp BinOpLe       = cmpOp (<=)
 binOp BinOpGt       = cmpOp (>)
 binOp BinOpGe       = cmpOp (>=)
 
-cmpOp op x y = VVector $ vectorize (propNa ((SLog.) . withBestType op)) x y
-numOp op x y = VVector $ vectorize (propNa (binWrap SNum valNum op)) x y
+cmpOp op x y = vectorize (propNa ((SLog.) . withBestType op)) x y
+numOp op x y = vectorize (propNa (binWrap SNum valNum op)) x y
 
 doEllipses start end =
     fromMaybe err $ do
@@ -290,11 +291,14 @@ propNa _ SNa _   = SNa
 propNa _ _   SNa = SNa
 propNa f a   b   = f a b
 
-vectorize op (VVector vx) (VVector vy) =
-    toVector . take len $ zipWith op vx' vy'
+vectorize op x y =
+    either VError VVector $ vectorize' op x y
+
+vectorize' op (VVector vx) (VVector vy) =
+    return . toVector . take len $ zipWith op vx' vy'
   where
     len = maximum (map vlen [vx, vy])
     vx' = cycle (vlist vx)
     vy' = cycle (vlist vy)
 
-vectorize _ _ _ = error $ "vector operation requires two vectors"
+vectorize' _ _ _ = throwError "vector operation requires two vectors"
