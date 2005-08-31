@@ -117,7 +117,7 @@ EXPECTED
 # non-rectangular tables are verboten
 
 load_csv_evals_exact_ok( <<FILE, qr/error .* non-rectangular/x );
-x y
+x,y
 T
 FILE
 
