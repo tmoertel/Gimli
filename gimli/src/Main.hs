@@ -8,6 +8,7 @@ import Control.Monad.State
 import Data.Char
 import qualified Data.Map as Map
 import Data.Maybe
+import System.Environment (getEnv)
 
 import qualified System.Console.Readline as LE
 import qualified System.Posix.Terminal as Terminal
@@ -19,21 +20,34 @@ import qualified Eval as Eval
 import qualified Value as Value
 import PPrint
 
+-- Config
+
+dotGimli = ".gimli"     -- ^ Name of GIMLI
+
 
 -- Main entry point
 
 main = do
     term <- Terminal.queryTerminal 0
     when term welcome
-    enterRepl $ initialState term
+    enterRepl =<< initialState term
     when term $ putStrLn "Exiting."
     
 
 initialState term =
-    ReplState { stExit = undefined
-              , stTerminal = term
-              , stEvalState = Eval.emptyEnv
-              }
+    (`execStateT` s0) . (`runContT` return) $ do
+        userconf <- liftIO $ handle (\_ -> return []) $ do
+            home <- getEnv "HOME"
+            liftM lines $ readFile (home ++ "/" ++ dotGimli)
+        mapM_ eval $ defaults ++ userconf
+  where
+    defaults =
+        if term then [ "SYS.ROWS <- 10; SYS.COLS <- 80" ]
+        else         [ "SYS.ROWS <- 1e9; SYS.COLS <- 1e9" ]
+    s0 = ReplState { stExit = undefined
+                   , stTerminal = term
+                   , stEvalState = Eval.emptyEnv
+                   }
 
 welcome =
     putStrLn . unlines $
@@ -71,20 +85,20 @@ enterRepl s0 = do
 
 repl =
     getCommand >>=
-    return () `maybe` \cmd -> eval cmd >> repl
+    return () `maybe` (\cmd -> eval cmd >>= liftIO . putStr >> repl)
 
 eval cmd@(':':_)
     | Just cmdFn <- let c = head (words cmd) in
                     lookup c $ mapFst (take (length c)) sysCommands
     = cmdFn cmd
     | otherwise
-    = liftIO . putStrLn $ "Unknown command: \"" ++ cmd ++ "\""
+    = return $ "Unknown command: \"" ++ cmd ++ "\""
 eval cmd = do
     result <- case parse cmd of
         Left err   -> return (Value.VError $ show err)
         Right expr -> doEval expr
     formatter <- getFormatter
-    liftIO . putStr . unlines . formatter . lines $ pp result
+    return . unlines . formatter . lines $ pp result
 
 doEval expr = do
     st <- gets stEvalState
@@ -125,7 +139,7 @@ trunc limit cut add xs =
 
 -- System commands
 
-handleStd = handle (\e -> putStrLn $ "an error occurred: " ++ show e)
+handleStd = handle (\e -> return $ "an error occurred: " ++ show e ++ "\n")
 
 sysCommands =
     [ (":quit",    sysQuit)
@@ -136,29 +150,30 @@ sysCommands =
     , (":thaw",    sysThaw)
     ]
 
-sysQuit _ =
+sysQuit _ = do
     exit ()
+    return ""
 
 sysHelp _ =
-    liftIO . putStrLn . unlines $
+    return . unlines $
     "Commands I know:" : map (("  " ++) . fst) sysCommands
 
 sysExplain cmd = do
     est <- gets (Eval.envMap . stEvalState)
-    liftIO . putStrLn . maybe nsvar pp $ Map.lookup varname est >>= Eval.clExp
+    return . (++"\n") . maybe nsvar pp $ Map.lookup varname est >>= Eval.clExp
   where
     varname = concat . tail $ words cmd
     nsvar   = "the variable \"" ++ varname
               ++ "\" does not exist or has no binding history"
 
 sysInspect =
-    liftIO . putStrLn . either show pp . parse . skipToArgs
+    return . (++"\n") . either show pp . parse . skipToArgs
 
 sysFreeze cmd = do
     stRep <- gets stEvalState >>= return . show
     liftIO . handleStd $ do
         writeFile (head . words . skipToArgs $ cmd) (stRep ++ "\n")
-        putStrLn $ "wrote state " ++ bytes stRep
+        return $ "wrote state " ++ bytes stRep ++ "\n"
 
 sysThaw cmd = do
     result <- liftIO . try $ do
@@ -169,7 +184,7 @@ sysThaw cmd = do
         Left e -> liftIO . handleStd $ throw e
         Right (stRep, st) -> do
             putEvalState st
-            liftIO $ putStrLn $ "read state " ++ bytes stRep
+            return $"read state " ++ bytes stRep ++ "\n"
 
 bytes s = "(" ++ show (length s) ++ " bytes)"
 
