@@ -47,8 +47,6 @@ welcome =
 
 -- REPL monad
 
-type ReplCtx r = ContT r (StateT (ReplState r ()) IO) ()
-
 data ReplState r a =
     ReplState { stExit      :: a -> ContT r (StateT (ReplState r a) IO) a
               , stTerminal  :: Bool
@@ -85,7 +83,8 @@ eval cmd = do
     result <- case parse cmd of
         Left err   -> return (Value.VError $ show err)
         Right expr -> doEval expr
-    liftIO $ putStrLn (pp result)
+    formatter <- getFormatter
+    liftIO . putStr . unlines . formatter . lines $ pp result
 
 doEval expr = do
     st <- gets stEvalState
@@ -98,6 +97,30 @@ doEval expr = do
 mapFst f = map (cross (f, id))
 pair (f, g) x = (f x, g x)
 cross (f, g)  = pair (f . fst, g . snd)
+
+getFormatter = do
+    rows <- getBindingValue "SYS.ROWS" >>= asNumWithDefault 10
+    cols <- getBindingValue "SYS.COLS" >>= asNumWithDefault 80
+    return (mkFormatter rows cols)
+  where
+    asNumWithDefault d v = return . maybe d round $ v >>= Value.asNum
+
+getBinding varname =
+    gets (Eval.envMap . stEvalState) >>= return . Map.lookup varname
+
+getBindingValue varname = do
+    v <- getBinding varname
+    return $ v >>= return . Eval.clVal
+
+mkFormatter :: Int -> Int -> [String] -> [String]
+mkFormatter rows cols ss =
+    trunc rows 0 [rmsg] $ map (trunc cols 3 "...") ss
+  where
+    rmsg = "(" ++ show rows ++ " of " ++ show (length ss) ++ " rows)"
+
+trunc limit cut add xs =
+    if length xs <= limit then xs
+    else take (limit - cut) xs ++ add
 
 
 -- System commands
@@ -148,7 +171,7 @@ sysThaw cmd = do
             putEvalState st
             liftIO $ putStrLn $ "read state " ++ bytes stRep
 
-bytes s = "(" ++ show (length s) ++ ")"
+bytes s = "(" ++ show (length s) ++ " bytes)"
 
 parse =
     Parser.gimlParse "input"

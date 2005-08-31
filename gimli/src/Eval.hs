@@ -1,7 +1,9 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Eval (
-    eval, evalTop, run, emptyEnv, clExp, envMap,
+    eval, evalTop, run, emptyEnv,
+    clExp, clVal,
+    envMap,
     EvalState
 ) where
 
@@ -263,10 +265,13 @@ binOp BinOpGe       = cmpOp (>=)
 cmpOp op x y = VVector $ vectorize (propNa ((SLog.) . withBestType op)) x y
 numOp op x y = VVector $ vectorize (propNa (binWrap SNum valNum op)) x y
 
-doEllipses (VVector start) (VVector end) =
-    mkVectorValue $ map SNum [ (vecNum start) .. (vecNum end) ]
-doEllipses _ _ =
-    VError $ "both operands to the (:) operator must be vectors"
+doEllipses start end =
+    fromMaybe err $ do
+        s <- asNum start
+        e <- asNum end
+        return $ mkVectorValue $ map SNum [ s .. e ]
+  where
+    err = VError $ "both operands to the (:) operator must be vectors"
 
 valNum x =
     case toSNum x of

@@ -3,7 +3,8 @@
 module Value (
     Identifier,
     Value(..),
-    vIsVector, vIsTable,
+        vIsVector, vIsTable,
+        asVector, asNum,
     Scalar(..), toScalar, toSNum, toSLog, keepNAs,
     Vector(..), ToVector(..),
         vlen, vtype, vlist, vmap, vnull,
@@ -93,6 +94,13 @@ strToNum s =
         Right n -> Just n
         _       -> Nothing
 
+asVector :: Monad m => Value -> m Vector
+asVector (VVector v) = return v
+asVector _           = fail "not a vector"
+
+asNum :: Monad m => Value -> m Double
+asNum v = asVector v >>= vecNum
+
 
 -- ============================================================================
 -- vectors
@@ -150,9 +158,12 @@ bestType xs =
 vectorCoerce vtype vec =
     mkVectorOfType vtype (vlist vec)
 
+vecNum :: Monad m => Vector -> m Double
 vecNum (V _ _ (x:_)) =
-    case toSNum x of (SNum n) -> n
-
+    case toSNum x of
+        SNum n -> return n
+        _      -> fail "not a number"
+           
 vtPromote VTStr _         = VTStr
 vtPromote VTNum (SLog _)  = VTNum
 vtPromote _     (SStr _)  = VTStr
