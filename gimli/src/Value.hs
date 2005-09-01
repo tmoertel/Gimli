@@ -4,7 +4,7 @@ module Value (
     Identifier,
     Value(..),
         vIsVector, vIsTable,
-        asVector, asNum,
+        asVector, asNum, asTable,
     Scalar(..), toScalar, toSNum, toSLog, keepNAs,
     Vector(..), ToVector(..),
         vlen, vtype, vlist, vmap, vnull,
@@ -13,7 +13,8 @@ module Value (
         VecType(..),
     Table(..),
         mkTable,
-        tableColumnIndexCheck, tableColumnLookupIndex, trows, tcnames
+        tableColumnIndexCheck, tableColumnLookupIndex,
+        trows, tcnames, tctypes
 ) where
 
 import Control.Monad
@@ -101,6 +102,10 @@ asVector _           = fail "not a vector"
 
 asNum :: Monad m => Value -> m Double
 asNum v = asVector v >>= vecNum
+
+asTable :: Monad m => Value -> m Table
+asTable (VTable t) = return t
+asTable _          = fail "not a table"
 
 
 -- ============================================================================
@@ -194,6 +199,8 @@ data Table = T { tcols   :: Array Int Identifier
 trows = transpose . map vlist . elems . tvecs
 
 tcnames = elems . tcols
+tctypes = map vtype . elems . tvecs
+
 
 mkTable :: [(Identifier, Vector)] -> Table
 mkTable colspecs =

@@ -16,9 +16,10 @@ import Data.List (group, transpose, (\\))
 import qualified Data.Map as Map
 import Data.Maybe
 
-import PPrint
 import Expr
+import Join
 import LoadData
+import PPrint
 
 type Closure    = (Env, Value, Maybe Expr)
 
@@ -94,6 +95,20 @@ eval (ESelect etarget eselect) = do
         VTable table -> select table eselect
         _ -> return . VError $ "selection applies only to tables and vectors"
 
+eval (EJoin joinType eltarg ertarg) =
+    return . (VError `either` VTable) =<< runErrorT ( do
+        ltable <- lift (eval eltarg)
+        unless (vIsTable ltable) (notTableError "left")
+        rtable <- lift (eval ertarg)
+        unless (vIsTable rtable) (notTableError "right")
+        lt <- asTable ltable
+        rt <- asTable rtable
+        tableJoin joinType lt rt
+        )
+  where
+    notTableError loc =
+        throwError $ loc ++ " argument of join must be a table"
+
 eval (EProject etarget pspec) = do
     target <- eval etarget
     case target of
@@ -116,6 +131,7 @@ eval (ETable ecolspecs) = do
   where
     names = map fst ecolspecs
     evecs = map snd ecolspecs
+
 
 -- select elements _es_ from vector _vec_:
 

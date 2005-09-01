@@ -110,8 +110,6 @@ doEval expr = do
     return val
 
 mapFst f = map (cross (f, id))
-pair (f, g) x = (f x, g x)
-cross (f, g)  = pair (f . fst, g . snd)
 
 getFormatter = do
     rows <- getBindingValue "SYS.ROWS" >>= asNumWithDefault 10

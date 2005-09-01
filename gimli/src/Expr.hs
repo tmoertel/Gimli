@@ -8,6 +8,7 @@ module Expr (
 )
 where
 
+import Join
 import Value
 import PPrint
 
@@ -23,6 +24,7 @@ data Expr
   | ETable [(Identifier, Expr)]
   | EReadCsv String
   | EReadWsv String
+  | EJoin JoinOp Expr Expr
   deriving (Show, Read, Eq, Ord)
 
 data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq

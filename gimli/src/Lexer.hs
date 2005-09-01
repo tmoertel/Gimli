@@ -7,6 +7,8 @@ import qualified Text.ParserCombinators.Parsec.Token as P
 
 import Data.List (nub)
 
+import qualified Utils as U
+
 gimlLexer :: P.TokenParser ()
 gimlLexer =
     P.makeTokenParser
@@ -24,7 +26,10 @@ gimlLexer =
       }
     )
 
-gimlOps = words "$ * / + ! - == != < > <= >= <- -> : = [ ]"
+gimlOps =  words "$ * / + ! - == != < > <= >= <- -> : = [ ]"
+        ++ joinOps
+
+joinOps =  "***" : U.combinations ["=*", "=", "=*"]
 
 runLex :: Show a => Parser a -> String -> IO ()
 runLex p input =

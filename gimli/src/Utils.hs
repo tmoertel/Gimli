@@ -26,3 +26,9 @@ uniqify ss =
                              , let sn = s ++ "." ++ show n
                              , not $ S.member sn given
                              , not $ S.member sn taken ]
+
+-- helpers for pairs
+
+pair (f, g) x    = (f x, g x)
+cross (f, g)     = pair (f . fst, g . snd)
+both f           = pair (f . fst, f . snd)

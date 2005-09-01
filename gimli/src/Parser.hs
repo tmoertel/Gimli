@@ -11,6 +11,7 @@ import Text.ParserCombinators.Parsec
 import ExprParser
 
 import Expr
+import Join
 import Lexer
 
 gimlParse =
@@ -119,6 +120,12 @@ opTable =
       ]
     , [ sfop  "$" EProject pspecExpr
       , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
+      ]
+    , [ eopl  "===" $ EJoin (JEquijoin JInner JInner)
+      , eopl  "*==" $ EJoin (JEquijoin JOuter JInner)
+      , eopl  "==*" $ EJoin (JEquijoin JInner JOuter)
+      , eopl  "*=*" $ EJoin (JEquijoin JOuter JOuter)
+      , eopl  "***" $ EJoin JCartesian
       ]
     , [ vopl  "*" BinOpTimes
       , vopl  "/" BinOpDiv
