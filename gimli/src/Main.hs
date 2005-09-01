@@ -19,6 +19,7 @@ import qualified Parser as Parser
 import qualified Eval as Eval
 import qualified Value as Value
 import PPrint
+import Utils
 
 -- Config
 
@@ -92,7 +93,7 @@ eval cmd@(':':_)
                     lookup c $ mapFst (take (length c)) sysCommands
     = cmdFn cmd
     | otherwise
-    = return $ "Unknown command: \"" ++ cmd ++ "\""
+    = return $ "Unknown command: \"" ++ cmd ++ "\"\n"
 eval cmd = do
     result <- case parse cmd of
         Left err   -> return (Value.VError $ show err)
@@ -130,7 +131,7 @@ mkFormatter :: Int -> Int -> [String] -> [String]
 mkFormatter rows cols ss =
     trunc rows 0 [rmsg] $ map (trunc cols 3 "...") ss
   where
-    rmsg = "(" ++ show rows ++ " of " ++ show (length ss) ++ " rows)"
+    rmsg = "(" ++ show rows ++ " of " ++ show (length ss) ++ " lines)"
 
 trunc limit cut add xs =
     if length xs <= limit then xs

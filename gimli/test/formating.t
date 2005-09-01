@@ -14,7 +14,7 @@ use RunGimli;
 #==============================================================================
 
 evals_exact_ok( "SYS.ROWS <- 0; 1", <<EOF );
-(0 of 1 rows)
+(0 of 1 lines)
 EOF
 
 evals_exact_ok( "SYS.COLS <- 0; 1", <<EOF );
