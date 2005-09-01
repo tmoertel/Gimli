@@ -56,12 +56,12 @@ vIsTable _            = False
 -- scalars
 -- ============================================================================
 
-data Scalar     -- ^ scalar value
-  = SStr String -- ^ string
-  | SNum Double -- ^ numeric
-  | SLog Bool   -- ^ logical
-  | SNa         -- ^ NA
-  | SNull       -- ^ NULL
+data Scalar      -- ^ scalar value
+  = SStr String  -- ^ string
+  | SNum !Double -- ^ numeric
+  | SLog !Bool   -- ^ logical
+  | SNa          -- ^ NA
+  | SNull        -- ^ NULL
     deriving (Read, Show, Ord, Eq)
 
 
