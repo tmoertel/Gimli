@@ -17,7 +17,7 @@ class Show a => PPrint a where
     pp = render . toDoc
 
 listToDoc :: PPrint a => [a] -> Doc
-listToDoc = brackets . cat . punctuate comma . map toDoc
+listToDoc = brackets . hcat . punctuate comma . map toDoc
 
 instance PPrint Int
 instance PPrint Integer
