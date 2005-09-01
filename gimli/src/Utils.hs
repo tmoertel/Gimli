@@ -10,6 +10,9 @@ combinations xs =
   where
     outer xs yss = [ x:ys | x <- xs, ys <- yss ]
 
+-- todo:  make uniqify fast when there are many duplicates
+-- uniqify (replicate 1000 "x")
+
 uniqify :: [String] -> [String]
 uniqify ss =
     snd (mapAccumL ins S.empty ss)
