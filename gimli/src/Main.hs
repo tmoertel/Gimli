@@ -53,10 +53,14 @@ initialState term =
 welcome =
     putStrLn . unlines $
     [ "      _       _ _"
-    , " __ _(_)_ __ | (_)    " ++ Name.name
-    , "/ _` | | '  \\| | |    Version " ++ Version.version
-    , "\\__, |_|_|_|_|_|_|    Enter :? for help."
+    , " __ _(_)_ __ | (_)"
+    , "/ _` | | '  \\| | |"
+    , "\\__, |_|_|_|_|_|_|"
     , "|___/"
+    , ""
+    , Name.name
+    , "Version " ++ Version.version
+    , "Enter :? for help."
     ]
 
 
