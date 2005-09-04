@@ -17,7 +17,7 @@ gimlLexer =
       , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"
-                          ,"table", "read.csv", "read.wsv"]
+                          ,"table", "read.csv", "read.wsv", "write.wsv"]
       , reservedOpNames = gimlOps
       , opStart         = oneOf . nub $ head gimlOps
       , opLetter        = oneOf . nub $ concatMap tail gimlOps
@@ -70,6 +70,7 @@ reservedOp     = glex P.reservedOp
 operator       = glex P.operator
 charLiteral    = glex P.charLiteral
 stringLiteral  = glex P.stringLiteral
+comma          = glex P.comma
 commaSep1      = glex P.commaSep1
 brackets       = glex P.brackets
 squares        = glex P.squares

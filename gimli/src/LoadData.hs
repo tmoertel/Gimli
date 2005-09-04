@@ -14,17 +14,16 @@ import WSV.Parser
 import Parser
 import Value
 
-loadCsvTable :: (MonadIO m) => String -> m Value
+loadCsvTable :: (MonadIO m, MonadError String m) => String -> m Table
 loadCsvTable path =
     loadTable csvFile path
 
-loadWsvTable :: (MonadIO m) => String -> m Value
+loadWsvTable :: (MonadIO m, MonadError String m) => String -> m Table
 loadWsvTable path =
     loadTable wsvFile path
 
 loadTable parser path =
-    runErrorT (loadFile parser path >>= gimlParseTable) >>=
-    return . either VError VTable
+    loadFile parser path >>= gimlParseTable
 
 loadFile parser path =
     liftIO (parseFromFile parser path) >>=

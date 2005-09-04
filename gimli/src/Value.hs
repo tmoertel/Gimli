@@ -4,7 +4,7 @@ module Value (
     Identifier,
     Value(..),
         vIsVector, vIsTable,
-        asVector, asNum, asTable,
+        asVector, asNum, asTable, asString,
     Scalar(..), toScalar, toSNum, toSLog, keepNAs,
     Vector(..), ToVector(..),
         vlen, vtype, vlist, vmap, vnull,
@@ -107,6 +107,8 @@ asTable :: Monad m => Value -> m Table
 asTable (VTable t) = return t
 asTable _          = fail "not a table"
 
+asString :: Monad m => Value -> m String
+asString v = asVector v >>= vecStr
 
 -- ============================================================================
 -- vectors
@@ -169,6 +171,12 @@ vecNum (V _ _ (x:_)) =
     case toSNum x of
         SNum n -> return n
         _      -> fail "not a number"
+           
+vecStr :: Monad m => Vector -> m String
+vecStr (V _ _ (x:_)) =
+    case toSStr x of
+        SStr s -> return s
+        _      -> fail "not a string"
            
 vtPromote VTStr _         = VTStr
 vtPromote VTNum (SLog _)  = VTNum

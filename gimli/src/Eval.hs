@@ -7,6 +7,7 @@ module Eval (
     EvalState
 ) where
 
+import Control.Exception
 import Control.Monad.Cont
 import Control.Monad.Error
 import Control.Monad.State
@@ -63,6 +64,17 @@ run st =
 
 evalL x = eval x >>= bind "LAST" . EVal
 
+errorWrapT fsuccess m =
+    runErrorT m >>= return . either VError fsuccess
+
+evalString e = lift (eval e) >>= asString
+evalTable e  = lift (eval e) >>= asTable
+
+
+{- | Evaluate an expression to result in a Value -}
+
+eval :: Expr -> Eval r Value
+
 eval (EVal v)
     = return v
 
@@ -115,11 +127,22 @@ eval (EProject etarget pspec) = do
         VTable table -> project table pspec
         _            -> return . VError $ "first operand of $ must be a table"
 
-eval (EReadCsv file) =
-    loadCsvTable file
+eval (EReadCsv efile) =
+    errorWrapT VTable $ loadCsvTable =<< argof "read.csv" (evalString efile)
 
-eval (EReadWsv file) =
-    loadWsvTable file
+eval (EReadWsv efile) =
+    errorWrapT VTable $ loadWsvTable =<< argof "read.csv" (evalString efile)
+
+eval (EWriteWsv etable efile) =
+    errorWrapT (const VNull) $ do
+        table <- arg1of nm $ evalTable etable
+        file  <- arg2of nm $ evalString efile
+        r <- liftIO $ try (writeFile file (pp table ++ "\n"))
+        case r of
+            Left err -> throwError (show err)
+            Right _  -> return ()
+  where
+    nm = "write.csv"
 
 eval (ETable ecolspecs) = do
     vvecs <- mapM eval evecs
@@ -131,6 +154,15 @@ eval (ETable ecolspecs) = do
   where
     names = map fst ecolspecs
     evecs = map snd ecolspecs
+
+argof  fname m = argxof fname ""   m
+arg1of fname m = argxof fname " 1" m
+arg2of fname m = argxof fname " 2" m
+argxof fname argstr m =
+    catchError m describe
+  where
+    describe err =
+        throwError ("argument" ++ argstr  ++ " of " ++ fname ++ ": " ++ err)
 
 
 -- select elements _es_ from vector _vec_:

@@ -22,8 +22,9 @@ data Expr
   | ESelect Expr Expr
   | EProject Expr PSpec
   | ETable [(Identifier, Expr)]
-  | EReadCsv String
-  | EReadWsv String
+  | EReadCsv Expr
+  | EReadWsv Expr
+  | EWriteWsv Expr Expr
   | EJoin JoinOp Expr Expr
   deriving (Show, Read, Eq, Ord)
 

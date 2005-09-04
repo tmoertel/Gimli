@@ -62,17 +62,27 @@ factor =
     <|> vectorExpr
     <|> varExpr
     <|> tableExpr
-    <|> loadExpr
+    <|> fileExpr
     <?> "simple expression"
 
 tableExpr =
     reserved "table" >> parens (commaSep1 nvpair) >>= return . ETable
 
-loadExpr =
-        loadx "read.csv" EReadCsv
-    <|> loadx "read.wsv" EReadWsv
+fileExpr =
+        filex "read.csv" expr EReadCsv
+    <|> filex "read.wsv" expr EReadWsv
+    <|> filex "write.wsv" (commaPair expr expr) (uncurry EWriteWsv)
   where
-    loadx s ctor = reserved s >> parens stringLiteral >>= return . ctor
+    filex s p ctor = reserved s >> parens p >>= return . ctor
+
+commaPair =
+    sepPair comma
+
+sepPair psep p1 p2 = do
+    e1 <- p1
+    psep
+    e2 <- p2
+    return (e1, e2)
 
 varExpr =
     identifier >>= return . EVar
