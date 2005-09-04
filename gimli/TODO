@@ -1,0 +1,23 @@
+Joins
+
+ltableExp(lexp1,lexp2,...) `joinop` rtableExp(rexp1,rxpe2,...)
+
+for each table create map:
+    (eval(exp1),eval(exp2),...) => [ (ROW.NUM(now),row) 
+                                   | row <- matching rows ]
+
+joining is 
+
+   [ lrow ++ rrow
+     | lrowkey <- keys leftMap
+     , lrows   =  lookup leftpMap lrowkey
+     , rrows   =  lookup rightMap lrowkey
+     , lrow    <- lrows
+     , rrow    <- rrows
+   ]
+
+
+
+Eval
+
+* Get rid of VError: add ErrorT to Eval monad stack
