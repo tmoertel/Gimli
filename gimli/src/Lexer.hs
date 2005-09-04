@@ -28,6 +28,7 @@ gimlLexer =
 
 gimlOps =  words "$ * / + ! - == != < > <= >= <- -> : = [ ]"
         ++ joinOps
+        ++ words "| & || &&"
 
 joinOps =  "***" : U.combinations ["=*", "=", "=*"]
 

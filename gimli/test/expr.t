@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 75;
+use Test::More tests => 107;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -72,6 +72,47 @@ evals_true_ok ( '1 >  0' );
 evals_false_ok( '1 >  1' );
 evals_true_ok ( '1 >= 0' );
 evals_true_ok ( '1 >= 1' );
+
+# scalar boolean ops
+
+evals_ok ( 'T && T', 'T' );
+evals_ok ( 'T && F', 'F' );
+evals_ok ( 'F && T', 'F' );
+evals_ok ( 'F && F', 'F' );
+evals_ok ( 'T || T', 'T' );
+evals_ok ( 'T || F', 'T' );
+evals_ok ( 'F || T', 'T' );
+evals_ok ( 'F || F', 'F' );
+
+evals_ok ( '[T,F] && [T,F]', 'T' );
+evals_ok ( '[T,F] && [F,T]', 'F' );
+evals_ok ( '[F,T] && [T,F]', 'F' );
+evals_ok ( '[F,T] && [F,T]', 'F' );
+evals_ok ( '[T,F] || [T,F]', 'T' );
+evals_ok ( '[T,F] || [F,T]', 'T' );
+evals_ok ( '[F,T] || [T,F]', 'T' );
+evals_ok ( '[F,T] || [F,T]', 'F' );
+
+# vector boolean ops
+
+evals_ok ( 'T & T', 'T' );
+evals_ok ( 'T & F', 'F' );
+evals_ok ( 'F & T', 'F' );
+evals_ok ( 'F & F', 'F' );
+evals_ok ( 'T | T', 'T' );
+evals_ok ( 'T | F', 'T' );
+evals_ok ( 'F | T', 'T' );
+evals_ok ( 'F | F', 'F' );
+
+evals_ok ( '[T,F] & [T,F]', '[T,F]' );
+evals_ok ( '[T,F] & [F,T]', '[F,F]' );
+evals_ok ( '[F,T] & [T,F]', '[F,F]' );
+evals_ok ( '[F,T] & [F,T]', '[F,T]' );
+evals_ok ( '[T,F] | [T,F]', '[T,F]' );
+evals_ok ( '[T,F] | [F,T]', '[T,T]' );
+evals_ok ( '[F,T] | [T,F]', '[T,T]' );
+evals_ok ( '[F,T] | [F,T]', '[F,T]' );
+
 
 # parens
 

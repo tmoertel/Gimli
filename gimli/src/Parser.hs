@@ -37,7 +37,7 @@ gimlParseTable rows = do
     vectors  = map (mkVector . map parseTableElem . tail) cols
     parseTableElem s =
         either (const (SStr s)) id (gimlReadScalar s)
-        
+
 expr :: Parser Expr
 expr =
         infixExpr
@@ -53,7 +53,7 @@ projectExpr = (<?> "projection") $ do
     reservedOp "$"
     pspecExpr >>= return . EProject target
 
-infixExpr = 
+infixExpr =
     buildExpressionParser opTable factor
 
 factor =
@@ -152,6 +152,11 @@ opTable =
       ]
     , [ pfop  "!" UOpNot
       ]
+    , [ vopr  "|" BinOpVOr
+      , vopr  "&" BinOpVAnd
+      , vopr  "||" BinOpSOr
+      , vopr  "&&" BinOpSAnd
+      ]
     , [ eopr  "<-" EBind
       , eopl  "->" (flip EBind)
       ]
@@ -184,7 +189,7 @@ pspecTable = parens $ do
     negated <- option False (char '-' >> return True)
     commaSep1 pspecElem >>= return . PSTable negated
 
-pspecElem = 
+pspecElem =
         (integer >>= return . PSCNum . fromInteger)
     <|> pspecNameEqualsExpr
     <|> (reservedOp "*" >> return PSCStar)

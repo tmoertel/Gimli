@@ -311,8 +311,17 @@ binOp BinOpLe       = cmpOp (<=)
 binOp BinOpGt       = cmpOp (>)
 binOp BinOpGe       = cmpOp (>=)
 
+binOp BinOpSOr      = scalarize logOp (||)
+binOp BinOpSAnd     = scalarize logOp (&&)
+binOp BinOpVOr      = logOp (||)
+binOp BinOpVAnd     = logOp (&&)
+
 cmpOp op x y = vectorize (propNa ((SLog.) . withBestType op)) x y
 numOp op x y = vectorize (propNa (binWrap SNum valNum op)) x y
+logOp op x y = vectorize (propNa (binWrap SLog valLog op)) x y
+
+scalarize f op x y =
+    mkVectorValue [toScalar (f op x y)]
 
 doEllipses start end =
     fromMaybe err $ do
@@ -326,6 +335,11 @@ valNum x =
     case toSNum x of
         SNum v -> v
         _      -> error $ "cannot coerce into numeric: (" ++ show x ++ ")"
+
+valLog x =
+    case toSLog x of
+        SLog b -> b
+        _      -> error $ "cannot coerce into logical: (" ++ show x ++ ")"
 
 binWrap wrapper argfn op l r = wrapper (argfn l `op` argfn r)
 
