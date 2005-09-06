@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 45;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -26,6 +26,19 @@ evals_ok( "c(1)", 1 );
 
 evals_ok( '["s",1,T,F]', '["s","1","T","F"]' );  # string trumps all
 evals_ok( '[1,T,F]'    , '[1,1,0]' ); # numeric trumps logical
+
+# nested vectors are flattened
+
+evals_ok( '[1,[2,[3]]]'              , '[1,2,3]' );
+evals_ok( 'x <- 3; [1,[2,x]]'        , '[1,2,3]' );
+evals_ok( 'x <- [3,4]; [1,[2,x]]'    , '[1,2,3,4]' );
+evals_ok( 'c(1,[2,c(3)])'            , '[1,2,3]' );
+evals_ok( 'x <- 3; c(1,[2,x])'       , '[1,2,3]' );
+evals_ok( 'x <- c(3,4); c(1,[2,x])'  , '[1,2,3,4]' );
+
+# error handling: vector-constructor's arguments must be vectors or scalars
+
+evals_ok( '[table(x=1)]',    qr/error.*not a vector/ );
 
 # arithmetic and comparison ops thread over vectors
 

@@ -78,6 +78,12 @@ eval :: Expr -> Eval r Value
 eval (EVal v)
     = return v
 
+eval (EVector es)
+    = errorWrapT VVector $ do
+          vecs <- argof "vector constructor" $
+                  mapM (\e -> lift (eval e) >>= asVector) es
+          return $ mkVector (concatMap vlist vecs)
+
 eval (EBind lvalue ev)
     | EVar ident <- lvalue = bind ident ev
     | otherwise            = return . VError $

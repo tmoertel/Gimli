@@ -92,16 +92,13 @@ nullExpr = do
     return (EVal VNull)
 
 vectorExpr = do
-        (scalarLiteralExpr >>= return . v)
-    <|> (bracketVectorExpr >>= return . v)
+        (scalarLiteralExpr >>= return . EVal . VVector . toVector)
+    <|> (bracketVectorExpr >>= return . EVector)
     <?> "vector"
-  where
-    v :: ToVector x => x -> Expr
-    v = EVal . VVector . toVector
 
 bracketVectorExpr =
-        (brackets (commaSep1 scalarLiteralExpr))
-    <|> (reserved "c" >> parens (commaSep1 scalarLiteralExpr))
+        (brackets (commaSep1 expr))
+    <|> (reserved "c" >> parens (commaSep1 expr))
     <?> "vector constructor"
 
 scalarLiteralExpr =

@@ -15,6 +15,7 @@ import PPrint
 data Expr
   = EVal Value
   | EBinOp BinOp Expr Expr
+  | EVector [Expr]
   | EUOp UnaryOp Expr
   | ESeries [Expr]
   | EVar Identifier
