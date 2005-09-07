@@ -253,9 +253,8 @@ evals_exact_ok( "$t; x[x<-T]", <<EOF);
 EOF
 
 evals_exact_ok( "t <- table(x=1:3,y=[NA,1,3]); t[y==1]", <<EOF);
-   x  y
-1 NA NA
-2  2  1
+  x y
+1 2 1
 EOF
 
 evals_ok( "$t; y<-4; x[y<-F]; y", 4);

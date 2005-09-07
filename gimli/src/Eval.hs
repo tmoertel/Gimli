@@ -217,9 +217,8 @@ select table expr = do
 
 sel1 val x =
     return $ case keepNAs toSLog $ toScalar val of
-        SLog False -> Nothing
         SLog True  -> Just x
-        _          -> Just SNa
+        _          -> Nothing
 
 
 -- projection of table
