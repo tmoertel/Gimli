@@ -194,9 +194,10 @@ pspecTable = parens $ do
     commaSep1 pspecElem >>= return . PSTable negated
 
 pspecElem =
-        (integer >>= return . PSCNum . fromInteger)
-    <|> pspecNameEqualsExpr
+        try (integer >>= return . PSCNum . fromInteger)
+    <|> try pspecNameEqualsExpr
     <|> (reservedOp "*" >> return PSCStar)
+    <|> (expr >>= return . PSCExpr)
 
 pspecNameEqualsExpr = do
     name <- identifier

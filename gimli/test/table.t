@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 55;
+use Test::More tests => 60;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -211,6 +211,38 @@ evals_exact_ok( "$t; x\$(-2,*,3)", <<EOF);
 2 2
 3 3
 EOF
+
+# pspecs that contain expressions
+
+evals_exact_ok( "$t; x\$(-[1:2])", <<EOF );
+  z
+1 T
+2 F
+3 T
+EOF
+
+evals_exact_ok( "$t; x\$((1+1+1))", <<EOF );
+  z
+1 T
+2 F
+3 T
+EOF
+
+evals_exact_ok( "$t; x\$(c(2,1))", <<EOF);
+   y x
+1 11 1
+2 12 2
+3 13 3
+EOF
+
+evals_exact_ok( "$t; x\$(-c(2,1))", <<EOF);
+  z
+1 T
+2 F
+3 T
+EOF
+
+evals_ok( "$t; x\$((NULL))", qr/error: .* vector/x );
 
 
 #==============================================================================

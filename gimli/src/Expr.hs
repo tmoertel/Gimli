@@ -52,6 +52,7 @@ data PSCol  = PSCNum Int              -- ^ column number
             | PSCName Identifier      -- ^ column name
             | PSCExp Identifier Expr  -- ^ ident=expr
             | PSCStar                 -- ^ "star" for all columns
+            | PSCExpr Expr            -- ^ expression
             deriving (Read, Show, Eq, Ord)
 
 -- ============================================================================

@@ -317,7 +317,7 @@ project table (PSVectorName s) =
     (project table . PSVectorNum) =<< tableColumnLookupIndex table s
 
 project table (PSTable True pscols) = do
-    colIndexes <- mapM getIndex (removeStars pscols)
+    colIndexes <- mapM getIndex =<< expandSpecials table (removeStars pscols)
     project table . PSTable False . map PSCNum $
         range (bounds $ tcols table) \\ colIndexes
   where
@@ -326,13 +326,13 @@ project table (PSTable True pscols) = do
     getIndex (PSCExp s _) = tableColumnLookupIndex table s
 
 project table (PSTable False pscols) = savingEnv $ do
+    pscols'  <- expandSpecials table pscols
     colNames <- mapM getName pscols'
     colExps  <- mapM getExp pscols'
     rows <- evalRows table colExps
     return $ VTable $ mkTable $
            zip colNames (map toVector $ transpose rows)
   where
-    pscols'                = expandStars table pscols
     getName                = pscol id fst
     getExp                 = pscol EVar snd
     pscol f g (PSCNum n)   = tableColumnIndexCheck table n >>=
@@ -340,6 +340,14 @@ project table (PSTable False pscols) = savingEnv $ do
     pscol f g (PSCName s)  = tableColumnLookupIndex table s >>=
                              pscol f g . PSCNum
     pscol f g (PSCExp s e) = return $ g (s,e)
+
+evalPS :: PSCol -> Eval r [PSCol]
+evalPS (PSCExpr e) = do
+    vec <- argof nm (evalVector e)
+    return [ PSCNum (round n) | SNum n <- vlist vec ]
+  where
+    nm = "projection-specification subexpression"
+evalPS psc = return [psc]
 
 
 evalRows :: Table -> [Expr] -> Eval r [[Value]]
@@ -360,6 +368,9 @@ removeStars =
   where
     isStar PSCStar = True
     isStar _       = False
+
+expandSpecials table pscs =
+    liftM concat (mapM evalPS (expandStars table pscs))
 
 expandStars table =
     concatMap starExpand
