@@ -33,6 +33,7 @@ data BinOp = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
            | BinOpBindL | BinOpBindR | BinOpEllipses
            | BinOpGt | BinOpGe | BinOpLt | BinOpLe
            | BinOpSOr | BinOpSAnd | BinOpVOr | BinOpVAnd
+           | BinOpIn
     deriving  (Show, Read, Eq, Ord)
 
 data UnaryOp = UOpNegate | UOpNot

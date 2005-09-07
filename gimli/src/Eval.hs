@@ -401,6 +401,7 @@ negOne = V VTNum 1 [SNum (-1.0)]
 binOp :: BinOp -> Value -> Value -> Eval r Value
 
 binOp BinOpEllipses = doEllipses
+binOp BinOpIn       = doInSet
 
 binOp BinOpTimes    = numOp (*)
 binOp BinOpDiv      = numOp (/)
@@ -435,6 +436,13 @@ doEllipses start end = do
     return $ mkVectorValue $ map SNum [ s .. e ]
   where
     nm = "(:) operator"
+
+doInSet velems vset = do
+    es  <- arg1of nm $ liftM vlist (asVector velems)
+    set <- arg2of nm $ liftM (Set.fromList . vlist) (asVector vset)
+    return . mkVectorValue $ map (SLog . (`Set.member` set)) es
+  where
+    nm = "%in% operator"
 
 valNum x =
     case toSNum x of

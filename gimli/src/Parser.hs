@@ -139,6 +139,8 @@ opTable =
     , [ vopl  "+" BinOpAdd
       , vopl  "-" BinOpSub
       ]
+    , [ voplx "%in%" BinOpIn
+      ]
     , [ vopl  "==" BinOpEq
       , vopl  "!=" BinOpNeq
       , vopl  "<"  BinOpLt

@@ -26,7 +26,7 @@ gimlLexer =
       }
     )
 
-gimlOps =  words "$ * / + ! - == != < > <= >= <- -> : = [ ]"
+gimlOps =  words "$ * / + ! % - == != < > <= >= <- -> : = [ ]"
         ++ joinOps
         ++ words "| & || &&"
 
