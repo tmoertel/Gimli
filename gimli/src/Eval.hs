@@ -43,8 +43,9 @@ envMap (Env emap) = emap
 
 -- Eval monad
 
+type EvalError   = String
 type EvalState   = Env
-type Eval r a    = ContT r (StateT EvalState IO) a
+type Eval r a    = ErrorT EvalError (ContT r (StateT EvalState IO)) a
 
 stEnv = id
 
@@ -54,53 +55,48 @@ bind ident valExpr = do
     modify $ modifyEnv $ Map.insert ident (env, val, Just valExpr)
     return val
 
-evalTop :: Expr -> IO Value
+evalTop :: Expr -> IO (Either EvalError Value)
 evalTop =
-    (`evalStateT` emptyEnv) . (`runContT` return) . evalL
+    (`evalStateT` emptyEnv) . (`runContT` return) . runErrorT . evalL
 
-run :: EvalState -> Expr -> IO (Value, EvalState)
+run :: EvalState -> Expr -> IO (Either EvalError Value, EvalState)
 run st =
-    (`runStateT` st) . (`runContT` return) . evalL
+    (`runStateT` st) . (`runContT` return) . runErrorT . evalL
 
 evalL x = eval x >>= bind "LAST" . EVal
 
-errorWrapT fsuccess m =
-    runErrorT m >>= return . either VError fsuccess
-
-evalString e = lift (eval e) >>= asString
-evalTable e  = lift (eval e) >>= asTable
+evalString e = eval e >>= asString
+evalTable e  = eval e >>= asTable
+evalVector e = eval e >>= asVector
 
 
 {- | Evaluate an expression to result in a Value -}
 
 eval :: Expr -> Eval r Value
 
-eval (EVal v)
-    = return v
+eval (EVal v) =
+    return v
 
-eval (EVector es)
-    = errorWrapT VVector $ do
-          vecs <- argof "vector constructor" $
-                  mapM (\e -> lift (eval e) >>= asVector) es
-          return $ mkVector (concatMap vlist vecs)
+eval (EVector es) = do
+    vecs <- argof "vector constructor" $ mapM evalVector es
+    return . VVector . mkVector $ concatMap vlist vecs
 
 eval (EBind lvalue ev)
     | EVar ident <- lvalue = bind ident ev
-    | otherwise            = return . VError $
+    | otherwise            = throwError $
                              "cannot bind to non-lvalue: " ++ pp lvalue
 
-eval (EVar ident)
-    = gets stEnv >>=
-      return . clVal . Map.findWithDefault nullClosure ident . envMap
+eval (EVar ident) =
+    gets stEnv >>=
+    return . clVal . Map.findWithDefault nullClosure ident . envMap
 
-eval (EUOp op x)
-    = eval x >>= return . uOp op
+eval (EUOp op x) =
+    eval x >>= uOp op
 
-eval (EBinOp op l r)
-    = do
-      lval <- eval l
-      rval <- eval r
-      return $ binOp op lval rval
+eval (EBinOp op el er) = do
+    l <- eval el
+    r <- eval er
+    binOp op l r
 
 eval (ESeries es)
     | es == []  = return VNull
@@ -111,55 +107,58 @@ eval (ESelect etarget eselect) = do
     case target of
         VVector vec  -> eval eselect >>= return . VVector . selectVector vec
         VTable table -> select table eselect
-        _ -> return . VError $ "selection applies only to tables and vectors"
+        _ -> throwError $ "selection applies only to tables and vectors"
 
-eval (EJoin joinType eltarg ertarg) =
-    return . (VError `either` VTable) =<< runErrorT ( do
-        ltable <- lift (eval eltarg)
-        unless (vIsTable ltable) (notTableError "left")
-        rtable <- lift (eval ertarg)
-        unless (vIsTable rtable) (notTableError "right")
-        lt <- asTable ltable
-        rt <- asTable rtable
-        tableJoin joinType lt rt
-        )
+eval (EJoin joinType eltarg ertarg) = do
+    ltable <- arg1of nm (evalTable eltarg)
+    rtable <- arg2of nm (evalTable ertarg)
+    liftM VTable (tableJoin joinType ltable rtable)
   where
+    nm = "join"
     notTableError loc =
         throwError $ loc ++ " argument of join must be a table"
 
 eval (EProject etarget pspec) = do
-    target <- eval etarget
-    case target of
-        VTable table -> project table pspec
-        _            -> return . VError $ "first operand of $ must be a table"
+    table <- arg1of "$" (evalTable etarget)
+    project table pspec
 
 eval (EReadCsv efile) =
-    errorWrapT VTable $ loadCsvTable =<< argof "read.csv" (evalString efile)
+    liftM VTable $ loadCsvTable =<< argof "read.csv" (evalString efile)
 
 eval (EReadWsv efile) =
-    errorWrapT VTable $ loadWsvTable =<< argof "read.csv" (evalString efile)
+    liftM VTable $ loadWsvTable =<< argof "read.csv" (evalString efile)
 
-eval (EWriteWsv etable efile) =
-    errorWrapT (const VNull) $ do
-        table <- arg1of nm $ evalTable etable
-        file  <- arg2of nm $ evalString efile
-        r <- liftIO $ try (writeFile file (pp table ++ "\n"))
-        case r of
+eval (EWriteWsv etable efile) = do
+    table <- arg1of nm $ evalTable etable
+    file  <- arg2of nm $ evalString efile
+    during "write.wsv" $ do
+        result <- liftIO . try $ writeFile file (pp table ++ "\n")
+        case result of
             Left err -> throwError (show err)
-            Right _  -> return ()
+            Right x  -> return (mkVectorValue [SStr file])
   where
     nm = "write.csv"
 
 eval (ETable ecolspecs) = do
-    vvecs <- mapM eval evecs
-    let vecs = [v | VVector v <- vvecs]
+    vecs <- argof nm $ mapM evalVector evecs
     let vlens = map vlen vecs
-    if all vIsVector vvecs && length (group vlens) == 1
+    if length (group vlens) == 1
         then return . VTable $ mkTable (zip names vecs)
-        else return . VError $ "table columns must be vectors of equal length"
+        else throwError $ "table columns must be vectors of equal length"
   where
+    nm    = "table constructor"
     names = map fst ecolspecs
     evecs = map snd ecolspecs
+
+
+-- error-reporting helpers
+
+during :: String -> Eval r a -> Eval r a
+during fname m =
+    catchError m describe
+  where
+    describe err =
+        throwError $ "during " ++ fname ++ ": " ++ err
 
 argof  fname m = argxof fname ""   m
 arg1of fname m = argxof fname " 1" m
@@ -203,12 +202,12 @@ takeLogical _  _           = Nothing
 
 select table expr = do
     env <- gets stEnv
-    result <- (return . (VError `either` VTable)) =<< runErrorT ( do
-        selections <- lift $ evalRows table [expr] >>= return . map head
+    result <- (`catchError` \e -> put env >> throwError e) $ do
+        selections <- evalRows table [expr] >>= return . map head
         vecs' <- mapM (liftM catMaybes . zipWithM sel1 selections . vlist) vecs
-        return $ table { tvecs = listArray (bounds tvts) $
-                                 zipWith mkVectorOfType origTypes vecs' }
-        )
+        return . VTable $
+               table { tvecs = listArray (bounds tvts) $
+                       zipWith mkVectorOfType origTypes vecs' }
     put env
     return result
   where
@@ -226,19 +225,15 @@ sel1 val x =
 -- projection of table
 
 project table (PSVectorNum n) =
-    return . (VError `either` (VVector . (tvecs table !))) $
-    tableColumnIndexCheck table n
+    liftM (VVector . (tvecs table !)) $ tableColumnIndexCheck table n
 
 project table (PSVectorName s) =
-    ((return . VError) `either` (project table . PSVectorNum)) $
-    tableColumnLookupIndex table s
+    (project table . PSVectorNum) =<< tableColumnLookupIndex table s
 
 project table (PSTable True pscols) = do
-    ((return . VError) `either` (project table . PSTable False)) =<<
-        runErrorT ( do
-            colIndexes <- mapM getIndex (removeStars pscols)
-            return . map PSCNum $ range (bounds $ tcols table) \\ colIndexes
-            )
+    colIndexes <- mapM getIndex (removeStars pscols)
+    project table . PSTable False . map PSCNum $
+        range (bounds $ tcols table) \\ colIndexes
   where
     getIndex (PSCNum n)   = tableColumnIndexCheck table n
     getIndex (PSCName s)  = tableColumnLookupIndex table s
@@ -246,12 +241,12 @@ project table (PSTable True pscols) = do
 
 project table (PSTable False pscols) = do
     env <- gets stEnv -- remember pre-eval environemnt
-    result <- return . (VError `either` VTable) =<< runErrorT ( do
+    result <- (`catchError` (\e -> put env >> throwError e)) $ do
         colNames <- mapM getName pscols'
         colExps  <- mapM getExp pscols'
-        rows <- lift $ evalRows table colExps
-        return $ mkTable $ zip colNames (map toVector $ transpose rows)
-        )
+        rows <- evalRows table colExps
+        return $ VTable $ mkTable $
+               zip colNames (map toVector $ transpose rows)
     put env -- restore environment
     return result
   where
@@ -285,30 +280,34 @@ expandStars table =
     starExpand PSCStar = map PSCNum (range . bounds $ tcols table)
     starExpand x       = [x]
 
+
 -- ============================================================================
 -- unary operations
 -- ============================================================================
 
-uOp :: UnaryOp -> Value -> Value
-uOp UOpNegate x        = binOp BinOpTimes (VVector negOne) x
-uOp UOpNot (VVector x) = VVector . vmap logNot $ vectorCoerce VTLog x
-uOp UOpNot _           = VError $ "operand of (!) must be a vector"
+uOp :: UnaryOp -> Value -> Eval r Value
+uOp UOpNegate x  = binOp BinOpTimes (VVector negOne) x
+uOp UOpNot v     = asVector v >>=
+                   return . VVector . vmap logNot . vectorCoerce VTLog
 
 logNot (SLog x) = SLog (not x)
 logNot _        = SNa
 
 negOne = V VTNum 1 [SNum (-1.0)]
 
+
 -- ============================================================================
 -- binary operations
 -- ============================================================================
 
-binOp :: BinOp -> Value -> Value -> Value
+binOp :: BinOp -> Value -> Value -> Eval r Value
+
+binOp BinOpEllipses = doEllipses
+
 binOp BinOpTimes    = numOp (*)
 binOp BinOpDiv      = numOp (/)
 binOp BinOpAdd      = numOp (+)
 binOp BinOpSub      = numOp (-)
-binOp BinOpEllipses = doEllipses
 
 binOp BinOpEq       = cmpOp (==)
 binOp BinOpNeq      = cmpOp (/=)
@@ -317,37 +316,42 @@ binOp BinOpLe       = cmpOp (<=)
 binOp BinOpGt       = cmpOp (>)
 binOp BinOpGe       = cmpOp (>=)
 
-binOp BinOpSOr      = scalarize logOp (||)
-binOp BinOpSAnd     = scalarize logOp (&&)
 binOp BinOpVOr      = logOp (||)
 binOp BinOpVAnd     = logOp (&&)
+binOp BinOpSOr      = scalarize logOp (||)
+binOp BinOpSAnd     = scalarize logOp (&&)
 
-cmpOp op x y = vectorize (propNa ((SLog.) . withBestType op)) x y
+
 numOp op x y = vectorize (propNa (binWrap SNum valNum op)) x y
-logOp op x y = vectorize (propNa (binWrap SLog valLog op)) x y
+logOp op x y = vectorize (propNa (binWrap SLog valBool op)) x y
+cmpOp op x y = vectorize (propNa f) x y
+  where
+    f x y = return $ SLog (withBestType op x y)
 
 scalarize f op x y =
-    mkVectorValue [toScalar (f op x y)]
+    return . mkVectorValue . (:[]) . toScalar =<< f op x y
 
-doEllipses start end =
-    fromMaybe err $ do
-        s <- asNum start
-        e <- asNum end
-        return $ mkVectorValue $ map SNum [ s .. e ]
+doEllipses start end = do
+    s <- arg1of nm $ asNum start
+    e <- arg2of nm $ asNum end
+    return $ mkVectorValue $ map SNum [ s .. e ]
   where
-    err = VError $ "both operands to the (:) operator must be vectors"
+    nm = "(:) operator"
 
 valNum x =
     case toSNum x of
-        SNum v -> v
-        _      -> error $ "cannot coerce into numeric: (" ++ show x ++ ")"
+        SNum v -> return v
+        _      -> throwError $ "cannot coerce into numeric: (" ++ show x ++ ")"
 
-valLog x =
+valBool x =
     case toSLog x of
-        SLog b -> b
-        _      -> error $ "cannot coerce into logical: (" ++ show x ++ ")"
+        SLog b -> return b
+        _      -> throwError $ "cannot coerce into logical: (" ++ show x ++ ")"
 
-binWrap wrapper argfn op l r = wrapper (argfn l `op` argfn r)
+binWrap wrapper argfn op l r = do
+    al <- argfn l
+    ar <- argfn r
+    return . wrapper $ al `op` ar
 
 withBestType :: (Scalar -> Scalar -> a) -> Scalar -> Scalar -> a
 withBestType f l r =
@@ -355,15 +359,17 @@ withBestType f l r =
   where
     [l', r'] = vlist $ toVector [l, r]
 
-propNa _ SNa _   = SNa
-propNa _ _   SNa = SNa
+propNa _ SNa _   = return SNa
+propNa _ _   SNa = return SNa
 propNa f a   b   = f a b
 
+vectorize :: (Scalar -> Scalar -> Eval r Scalar)
+             -> Value -> Value -> Eval r Value
 vectorize op x y =
-    either VError VVector $ vectorize' op x y
+    return . VVector =<< vectorize' op x y
 
 vectorize' op (VVector vx) (VVector vy) =
-    return . toVector . take len $ zipWith op vx' vy'
+    return . toVector =<< zipWithM op (take len vx') (take len vy')
   where
     len = maximum (map vlen [vx, vy])
     vx' = cycle (vlist vx)

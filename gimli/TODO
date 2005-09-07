@@ -36,6 +36,6 @@ TODO  -*- Outline -*-
    http://www.oreillynet.com/pub/a/network/2002/04/23/fulljoin.html
 
 
-Eval
+* Eval
 
-* Get rid of VError: add ErrorT to Eval monad stack
+X Get rid of VError: add ErrorT to Eval monad stack

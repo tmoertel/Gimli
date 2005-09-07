@@ -4,7 +4,7 @@ module Value (
     Identifier,
     Value(..),
         vIsVector, vIsTable,
-        asVector, asNum, asTable, asString,
+        asVector, asNum, asTable, asString, asBool,
     Scalar(..), toScalar, toSNum, toSLog, keepNAs,
     Vector(..), ToVector(..),
         vlen, vtype, vlist, vmap, vnull,
@@ -36,13 +36,11 @@ data Value
   = VVector Vector
   | VTable Table
   | VNull   
-  | VError String
     deriving (Read, Show, Ord, Eq)
 
 instance PPrint Value where
     toDoc (VVector v) = toDoc v
     toDoc VNull       = text "NULL"
-    toDoc (VError s)  = text $ "error: " ++ s
     toDoc (VTable t)  = toDoc t
 --    toDoc x           = error $ "don't know how to pp " ++ show x
 
@@ -110,6 +108,9 @@ asTable _          = fail "not a table"
 asString :: Monad m => Value -> m String
 asString v = asVector v >>= vecStr
 
+asBool :: Monad m => Value -> m Bool
+asBool v = asVector v >>= vecLog
+
 -- ============================================================================
 -- vectors
 -- ============================================================================
@@ -171,6 +172,12 @@ vecNum (V _ _ (x:_)) =
     case toSNum x of
         SNum n -> return n
         _      -> fail "not a number"
+           
+vecLog :: Monad m => Vector -> m Bool
+vecLog (V _ _ (x:_)) =
+    case toSLog x of
+        SLog b -> return b
+        _      -> fail "not a logical"
            
 vecStr :: Monad m => Vector -> m String
 vecStr (V _ _ (x:_)) =

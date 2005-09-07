@@ -100,16 +100,14 @@ eval cmd@(':':_)
     = return $ "Unknown command: \"" ++ cmd ++ "\"\n"
 eval cmd = do
     result <- case parse cmd of
-        Left err   -> return (Value.VError $ show err)
-        Right expr -> doEval expr
+        Left err   -> return ("syntax error: " ++ show err)
+        Right expr -> doEval expr >>= return . either ("error: " ++) pp
     formatter <- getFormatter
-    return . unlines . formatter . lines $ pp result
+    return . unlines . formatter . lines $ result
 
 doEval expr = do
     st <- gets stEvalState
-    (val, st') <-  liftIO $
-        handle (\e -> return (Value.VError $ show e, st)) $
-        Eval.run st expr
+    (val, st') <-  liftIO $ Eval.run st expr
     putEvalState st'
     return val
 
