@@ -11,7 +11,6 @@ import Text.ParserCombinators.Parsec
 import ExprParser
 
 import Expr
-import Join
 import Lexer
 
 gimlParse =
@@ -128,10 +127,10 @@ opTable =
     , [ sfop  "$" EProject pspecExpr
       , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
       ]
-    , [ eopr  "===" $ EJoin (JEquijoin JInner JInner)
-      , eopr  "*==" $ EJoin (JEquijoin JOuter JInner)
-      , eopr  "==*" $ EJoin (JEquijoin JInner JOuter)
-      , eopr  "*=*" $ EJoin (JEquijoin JOuter JOuter)
+    , [ jopr  "===" $ \l r -> EJoin (JNatural JInner l r JInner)
+      , jopr  "*==" $ \l r -> EJoin (JNatural JOuter l r JInner)
+      , jopr  "==*" $ \l r -> EJoin (JNatural JInner l r JOuter)
+      , jopr  "*=*" $ \l r -> EJoin (JNatural JOuter l r JOuter)
       , eopr  "***" $ EJoin JCartesian
       ]
     , [ vopl  "*" BinOpTimes
@@ -172,6 +171,14 @@ opTable =
                         return $ \t -> ctor t x
     op a f assoc  = Infix (reservedOp a >> return f) assoc
     opx a f assoc = Infix (symbol a >> return f) assoc
+    jopr s ctor   = Infix joinExpr AssocRight
+      where
+        joinExpr  = do
+                    l <- bexprs
+                    reservedOp s
+                    r <- bexprs
+                    return (ctor l r)
+        bexprs    = option [] (braces (commaSep expr))
 
 -- projection specs
 

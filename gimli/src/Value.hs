@@ -35,7 +35,7 @@ type Identifier = String
 data Value
   = VVector Vector
   | VTable Table
-  | VNull   
+  | VNull
     deriving (Read, Show, Ord, Eq)
 
 instance PPrint Value where
@@ -172,19 +172,19 @@ vecNum (V _ _ (x:_)) =
     case toSNum x of
         SNum n -> return n
         _      -> fail "not a number"
-           
+
 vecLog :: Monad m => Vector -> m Bool
 vecLog (V _ _ (x:_)) =
     case toSLog x of
         SLog b -> return b
         _      -> fail "not a logical"
-           
+
 vecStr :: Monad m => Vector -> m String
 vecStr (V _ _ (x:_)) =
     case toSStr x of
         SStr s -> return s
         _      -> fail "not a string"
-           
+
 vtPromote VTStr _         = VTStr
 vtPromote VTNum (SLog _)  = VTNum
 vtPromote _     (SStr _)  = VTStr
@@ -235,6 +235,10 @@ instance ColumnIdentifier String where
 
 instance PPrint Table where
     toDoc = vcat . map text . lines . ppTable
+
+ppTable (T ns vs _)
+    | rangeSize (bounds vs) == 0
+    = "(empty table)"
 
 ppTable (T ns vs _) =
     unlines $

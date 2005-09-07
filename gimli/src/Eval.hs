@@ -15,12 +15,13 @@ import Data.Array
 import Data.Either
 import Data.List (group, transpose, (\\))
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Maybe
 
 import Expr
-import Join
 import LoadData
 import PPrint
+import Utils
 
 type Closure    = (Env, Value, Maybe Expr)
 
@@ -170,6 +171,10 @@ argxof fname argstr m =
         throwError ("argument" ++ argstr  ++ " of " ++ fname ++ ": " ++ err)
 
 
+-- ============================================================================
+-- vector operations
+-- ============================================================================
+
 -- select elements _es_ from vector _vec_:
 
 selectVector (V tvtype _ txs) (VVector (V VTNum _ sxs)) =
@@ -198,18 +203,100 @@ takeLogical _  SNa         = Just SNa
 takeLogical _  _           = Nothing
 
 
--- selection of table
+-- ============================================================================
+-- table operations
+-- ============================================================================
 
-select table expr = do
+savingEnv m = do
     env <- gets stEnv
-    result <- (`catchError` \e -> put env >> throwError e) $ do
-        selections <- evalRows table [expr] >>= return . map head
-        vecs' <- mapM (liftM catMaybes . zipWithM sel1 selections . vlist) vecs
-        return . VTable $
-               table { tvecs = listArray (bounds tvts) $
-                       zipWith mkVectorOfType origTypes vecs' }
+    result <- m `catchError` \e -> put env >> throwError e
     put env
     return result
+
+
+-- joins
+
+tableJoin JCartesian tl tr =
+    return $ mkTable (zip colnames colvecs)
+  where
+    (lrs, rrs) = both trows (tl, tr)
+    colvecs    = zipWith mkVectorOfType coltypes (transpose rows)
+    rows       = [ lr ++ rr | lr <- lrs, rr <- rrs ]
+    colnames   = uniqify . uncurry (++) $ both tcnames (tl, tr)
+    coltypes   = uncurry (++) (both tctypes (tl, tr))
+
+tableJoin (JNatural il [] [] ir) tl tr =
+    tableJoin (JNatural il sharedColumns sharedColumns ir) tl tr
+  where
+    sharedColumns =
+        map EVar . withDefault ["ROW.ID"] $
+        sharedStrings (tcnames tl) (tcnames tr)
+
+tableJoin (JNatural il lexps [] ir) tl tr =
+    tableJoin (JNatural il lexps lexps ir) tl tr
+
+tableJoin (JNatural il [] rexps ir) tl tr =
+    tableJoin (JNatural il rexps rexps ir) tl tr
+
+tableJoin (JNatural il lexps rexps ir) tl tr = savingEnv $ do
+    lassocs <- liftM (`zip` trows tl) (evalRows tl lexps)
+    rmap    <- buildRowMap tr rexps
+    return $
+        naturalJoin (tl, lassocs, il==JOuter) (tr, rmap, rexps, ir==JOuter)
+
+tableJoin op _ _ =
+    throwError $ "this type of join (" ++ show op ++ ") is not implemented yet"
+
+naturalJoin (tl, lassocs, outL) (tr, rmap, rexps, outR) =
+    mkTable (zip colnames colvecs)
+  where
+    colnames     = uniqify (keepers (tcnames tl ++ tcnames tr))
+    colvecs      = zipWith mkVectorOfType coltypes (keepers $ transpose rows)
+    coltypes     = keepers (tctypes tl ++ tctypes tr)
+    keepers xs   = [ x | (True, x) <- zip wantedCols xs ]
+    wantedCols   = [ True | _ <- tcnames tl ] ++
+                   map (\c -> outR || Set.member c wantedRCols) (tcnames tr)
+    wantedRCols  = Set.fromList (dropJoinVars rexps tr)
+    rows         = naturalRows (tl, lassocs, outL) (tr, rmap, outR)
+
+naturalRows (tl, lassocs, outL) (tr, rmap, outR) =
+    rowsl ++ if outR then rowsr else []
+  where
+    rowsl = [ l ++ r | (k,l) <- lassocs
+                     , r <- Map.findWithDefault defL k rmap ]
+    (nasL,nasR) = both ((`replicate` SNa) . rangeSize . bounds . tcols) (tl,tr)
+    defL  = if outL then [nasR] else []
+    rowsr = if outR then [nasL ++ r | r <- rdiff] else []
+    rdiff = concat $ Map.elems (rmap `Map.difference` Map.fromList lassocs)
+
+dropJoinVars es table =
+    tcnames table \\ joinVars es table
+
+joinVars es table =
+    sharedStrings [s | EVar s <- es] (tcnames table)
+
+buildRowMap table exps = do
+    rowResults <- evalRows table exps
+    return $ (Map.fromListWith (flip (++)))
+             (rowResults `zip` map (:[]) (trows table))
+
+withDefault l [] = l
+withDefault _ r  = r
+
+sharedStrings xs ys =
+    Set.toList $
+    uncurry Set.intersection $
+    both Set.fromList (xs, ys)
+
+
+-- selection of table
+
+select table expr = savingEnv $ do
+    selections <- evalRows table [expr] >>= return . map head
+    vecs' <- mapM (liftM catMaybes . zipWithM sel1 selections . vlist) vecs
+    return . VTable $
+           table { tvecs = listArray (bounds tvts) $
+                   zipWith mkVectorOfType origTypes vecs' }
   where
     tvts      = tvecs table
     vecs      = elems tvts
@@ -238,16 +325,12 @@ project table (PSTable True pscols) = do
     getIndex (PSCName s)  = tableColumnLookupIndex table s
     getIndex (PSCExp s _) = tableColumnLookupIndex table s
 
-project table (PSTable False pscols) = do
-    env <- gets stEnv -- remember pre-eval environemnt
-    result <- (`catchError` (\e -> put env >> throwError e)) $ do
-        colNames <- mapM getName pscols'
-        colExps  <- mapM getExp pscols'
-        rows <- evalRows table colExps
-        return $ VTable $ mkTable $
-               zip colNames (map toVector $ transpose rows)
-    put env -- restore environment
-    return result
+project table (PSTable False pscols) = savingEnv $ do
+    colNames <- mapM getName pscols'
+    colExps  <- mapM getExp pscols'
+    rows <- evalRows table colExps
+    return $ VTable $ mkTable $
+           zip colNames (map toVector $ transpose rows)
   where
     pscols'                = expandStars table pscols
     getName                = pscol id fst
@@ -258,11 +341,16 @@ project table (PSTable False pscols) = do
                              pscol f g . PSCNum
     pscol f g (PSCExp s e) = return $ g (s,e)
 
+
+evalRows :: Table -> [Expr] -> Eval r [[Value]]
 evalRows table colExps = do
-    mapM projectRow (trows table)
+    zipWithM projectRow [1..] (trows table)
   where
-    projectRow r = bindCols r >> mapM eval colExps
-    bindCols     = zipWithM bindScalar (tcnames table)
+    projectRow rid row = do
+        bindCols row
+        bindScalar "ROW.ID" (SNum (fromIntegral rid))
+        mapM eval colExps
+    bindCols = zipWithM bindScalar (tcnames table)
 
 bindScalar ident x =
     bind ident (EVal $ mkVectorValue [x])

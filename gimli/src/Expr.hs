@@ -4,11 +4,11 @@ module Expr (
     Expr(..),
     BinOp(..), UnaryOp(..),
     PSpec(..), PSCol(..),
+    JoinOp(..), JoinInclusion(..),
     module Value
 )
 where
 
-import Join
 import Value
 import PPrint
 
@@ -53,3 +53,18 @@ data PSCol  = PSCNum Int              -- ^ column number
             | PSCExp Identifier Expr  -- ^ ident=expr
             | PSCStar                 -- ^ "star" for all columns
             deriving (Read, Show, Eq, Ord)
+
+-- ============================================================================
+-- join operators
+-- ============================================================================
+
+data JoinOp
+    = JCartesian
+    | JNatural JoinInclusion [Expr] [Expr] JoinInclusion
+    deriving (Eq, Ord, Read, Show)
+
+data JoinInclusion
+    = JInner
+    | JOuter
+    deriving (Eq, Ord, Read, Show)
+
