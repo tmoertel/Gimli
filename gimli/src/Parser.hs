@@ -128,11 +128,11 @@ opTable =
     , [ sfop  "$" EProject pspecExpr
       , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
       ]
-    , [ eopl  "===" $ EJoin (JEquijoin JInner JInner)
-      , eopl  "*==" $ EJoin (JEquijoin JOuter JInner)
-      , eopl  "==*" $ EJoin (JEquijoin JInner JOuter)
-      , eopl  "*=*" $ EJoin (JEquijoin JOuter JOuter)
-      , eopl  "***" $ EJoin JCartesian
+    , [ eopr  "===" $ EJoin (JEquijoin JInner JInner)
+      , eopr  "*==" $ EJoin (JEquijoin JOuter JInner)
+      , eopr  "==*" $ EJoin (JEquijoin JInner JOuter)
+      , eopr  "*=*" $ EJoin (JEquijoin JOuter JOuter)
+      , eopr  "***" $ EJoin JCartesian
       ]
     , [ vopl  "*" BinOpTimes
       , vopl  "/" BinOpDiv
