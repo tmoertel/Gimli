@@ -14,7 +14,8 @@ dist_pkg = $(dist_dir)/$(package_name)-$(version)
 gimli_packages = -package readline
 
 ghc_prof =
-ghc_opts += $(ghc_prof)
+ghc_opt  =
+ghc_opts += $(ghc_prof) $(ghc_opt)
 
 # targets
 
@@ -28,6 +29,10 @@ $(app_dir)/gimli: $(hsfiles)
 .PHONY: prof
 prof:
 	$(MAKE) ghc_prof"=-auto-all -prof" all
+
+.PHONY: opt
+opt:
+	$(MAKE) ghc_opt=-O2 all
 
 .PHONY: test sanity recent
 test: all
