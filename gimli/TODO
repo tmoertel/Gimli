@@ -1,21 +1,39 @@
-Joins
+TODO  -*- Outline -*-
 
-ltableExp(lexp1,lexp2,...) `joinop` rtableExp(rexp1,rxpe2,...)
+* Summary to-do items
 
-for each table create map:
-    (eval(exp1),eval(exp2),...) => [ (ROW.NUM(now),row) 
-                                   | row <- matching rows ]
+  X additional boolean ops: | || & &&
+  - op %in%
+  X richer vector construction
+  - remaining join ops
+  - richer projection specifications
+  X data export (write.wsv)
+  - logging
+  - interrupt trapping (so you can use ^C to interrupt computations)
 
-joining is 
 
-   [ lrow ++ rrow
-     | lrowkey <- keys leftMap
-     , lrows   =  lookup leftpMap lrowkey
-     , rrows   =  lookup rightMap lrowkey
-     , lrow    <- lrows
-     , rrow    <- rrows
-   ]
+* Joins
 
+  ltableExp(lexp1,lexp2,...) `joinop` rtableExp(rexp1,rxpe2,...)
+
+  for each table create map:
+      (eval(exp1),eval(exp2),...) => [ (ROW.NUM(now),row)
+                                     | row <- matching rows ]
+
+  joining is
+
+     [ lrow ++ rrow
+       | lrowkey <- keys leftMap
+       , lrows   =  lookup leftpMap lrowkey
+       , rrows   =  lookup rightMap lrowkey
+       , lrow    <- lrows
+       , rrow    <- rrows
+     ]
+
+** Full outer join
+
+   FOJ = LOJ `union` ROJ
+   http://www.oreillynet.com/pub/a/network/2002/04/23/fulljoin.html
 
 
 Eval
