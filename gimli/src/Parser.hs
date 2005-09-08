@@ -206,10 +206,8 @@ pspecElem =
     <|> (reservedOp "*" >> return PSCStar)
     <|> (expr >>= return . PSCExpr)
 
-pspecNameEqualsExpr = do
-    name <- identifier
-    reservedOp "="
-    expr >>= return . PSCNExpr name
+pspecNameEqualsExpr =
+    liftM (uncurry PSCNExpr) nvpair
 
 
 -- helper parser combinators
