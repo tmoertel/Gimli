@@ -8,8 +8,8 @@ import Control.Monad.Error
 import Data.Either
 import Data.List (transpose, filter, group)
 import Text.ParserCombinators.Parsec
-import ExprParser
 
+import ExprParser
 import Expr
 import Lexer
 
@@ -128,8 +128,8 @@ opTable =
       , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
       ]
     , [ jopr  "===" $ \l r -> EJoin (JNatural JInner l r JInner)
-      , jopr  "*==" $ \l r -> EJoin (JNatural JOuter l r JInner)
       , jopr  "==*" $ \l r -> EJoin (JNatural JInner l r JOuter)
+      , jopr  "*==" $ \l r -> EJoin (JNatural JOuter l r JInner)
       , jopr  "*=*" $ \l r -> EJoin (JNatural JOuter l r JOuter)
       , eopr  "***" $ EJoin JCartesian
       ]
@@ -173,7 +173,7 @@ opTable =
                         return $ \t -> ctor t x
     op a f assoc  = Infix (reservedOp a >> return f) assoc
     opx a f assoc = Infix (symbol a >> return f) assoc
-    jopr s ctor   = Infix joinExpr AssocRight
+    jopr s ctor   = Infix (try joinExpr) AssocRight
       where
         joinExpr  = do
                     l <- bexprs
@@ -196,16 +196,20 @@ pspecTable = parens $ do
     commaSep1 pspecElem >>= return . PSTable negated
 
 pspecElem =
-        try (integer >>= return . PSCNum . fromInteger)
+        try (do i <- integer
+                notFollowedBy (noneOf ",)")
+                return . PSCNum $ fromInteger i)
     <|> try pspecNameEqualsExpr
+    <|> try (do s <- identifier
+                notFollowedBy (noneOf ",)")
+                return $ PSCName s)
     <|> (reservedOp "*" >> return PSCStar)
     <|> (expr >>= return . PSCExpr)
 
 pspecNameEqualsExpr = do
     name <- identifier
-    option (PSCName name) $ do
-        reservedOp "="
-        expr >>= return . PSCExp name
+    reservedOp "="
+    expr >>= return . PSCNExpr name
 
 
 -- helper parser combinators
