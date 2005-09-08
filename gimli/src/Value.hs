@@ -24,6 +24,7 @@ import qualified Data.Map as Map
 import Data.List (intersperse, sortBy, transpose)
 import Data.Maybe
 import Text.ParserCombinators.Parsec (parse)
+import Text.Show
 
 import DataMapRead
 import Lexer  -- for number parsing
@@ -36,7 +37,12 @@ data Value
   = VVector Vector
   | VTable Table
   | VNull
-    deriving (Read, Show, Ord, Eq)
+    deriving (Ord, Eq)
+
+instance Show Value where
+    showsPrec _ (VVector v) = shows v
+    showsPrec _ (VTable t)  = shows t
+    showsPrec _  VNull      = showString "NULL"
 
 instance PPrint Value where
     toDoc (VVector v) = toDoc v
@@ -60,8 +66,14 @@ data Scalar      -- ^ scalar value
   | SLog !Bool   -- ^ logical
   | SNa          -- ^ NA
   | SNull        -- ^ NULL
-    deriving (Read, Show, Ord, Eq)
+    deriving (Ord, Eq)
 
+instance Show Scalar where
+    showsPrec _ (SStr s) = shows s
+    showsPrec _ (SNum n) = showString . trimPointZero $ show n
+    showsPrec _ (SLog b) = shows b
+    showsPrec _  SNa     = showString "NA"
+    showsPrec _  SNull   = showString "NULL"
 
 instance PPrint Scalar where
     toDoc (SNum x)  = toDoc x
@@ -116,7 +128,7 @@ asBool v = asVector v >>= vecLog
 -- ============================================================================
 
 data Vector  = V VecType Int [Scalar]
-               deriving (Read, Show, Ord, Eq)
+               deriving (Ord, Eq)
 
 data VecType = VTNum | VTStr | VTLog
                deriving (Read, Show, Ord, Eq)
@@ -124,6 +136,10 @@ data VecType = VTNum | VTStr | VTLog
 instance PPrint Vector where
     toDoc (V _ _ [x]) = toDoc x
     toDoc (V _ _ xs)  = listToDoc xs
+
+instance Show Vector where
+    showsPrec _ (V _ _ [x]) = shows x
+    showsPrec _ (V _ _ xs)  = showListWith shows xs
 
 vlen :: Vector -> Int
 vlen (V _ l _) = l
@@ -209,7 +225,7 @@ data Table = T { tcols   :: Array Int Identifier
                , tvecs   :: Array Int Vector
                , tlookup :: Map.Map Identifier Int
                }
-             deriving (Read, Show, Eq, Ord)
+             deriving (Show, Eq, Ord)
 
 trows = transpose . map vlist . elems . tvecs
 

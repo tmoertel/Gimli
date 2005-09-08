@@ -148,7 +148,7 @@ sysCommands =
     , (":explain", sysExplain)
     , (":inspect", sysInspect)
     , (":freeze",  sysFreeze)
-    , (":thaw",    sysThaw)
+--  , (":thaw",    sysThaw)
     ]
 
 sysQuit _ = do
@@ -175,6 +175,7 @@ sysFreeze cmd = do
     liftIO . handleStd $ do
         writeFile (head . words . skipToArgs $ cmd) (stRep ++ "\n")
         return $ "wrote state " ++ bytes stRep ++ "\n"
+{-
 
 sysThaw cmd = do
     result <- liftIO . try $ do
@@ -186,6 +187,7 @@ sysThaw cmd = do
         Right (stRep, st) -> do
             putEvalState st
             return $"read state " ++ bytes stRep ++ "\n"
+-}
 
 bytes s = "(" ++ show (length s) ++ " bytes)"
 

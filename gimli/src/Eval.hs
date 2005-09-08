@@ -32,7 +32,7 @@ clExp (_,v,x) = x
 nullClosure = (emptyEnv, VNull, Nothing)
 
 type EnvMap     = Map.Map Identifier Closure
-data Env        = Env EnvMap deriving (Read, Show, Eq, Ord)
+data Env        = Env EnvMap deriving (Show, Eq, Ord)
 
 emptyEnv :: Env
 emptyEnv  = Env Map.empty
@@ -321,9 +321,9 @@ project table (PSTable True pscols) = do
     project table . PSTable False . map PSCNum $
         range (bounds $ tcols table) \\ colIndexes
   where
-    getIndex (PSCNum n)   = tableColumnIndexCheck table n
-    getIndex (PSCName s)  = tableColumnLookupIndex table s
-    getIndex (PSCExp s _) = tableColumnLookupIndex table s
+    getIndex (PSCNum n)     = tableColumnIndexCheck table n
+    getIndex (PSCName s)    = tableColumnLookupIndex table s
+    getIndex (PSCNExpr s _) = tableColumnLookupIndex table s
 
 project table (PSTable False pscols) = savingEnv $ do
     pscols'  <- expandSpecials table pscols
@@ -333,13 +333,13 @@ project table (PSTable False pscols) = savingEnv $ do
     return $ VTable $ mkTable $
            zip colNames (map toVector $ transpose rows)
   where
-    getName                = pscol id fst
-    getExp                 = pscol EVar snd
-    pscol f g (PSCNum n)   = tableColumnIndexCheck table n >>=
-                             return . f . (tcols table !)
-    pscol f g (PSCName s)  = tableColumnLookupIndex table s >>=
-                             pscol f g . PSCNum
-    pscol f g (PSCExp s e) = return $ g (s,e)
+    getName                  = pscol id fst
+    getExp                   = pscol EVar snd
+    pscol f g (PSCNum n)     = tableColumnIndexCheck table n >>=
+                               return . f . (tcols table !)
+    pscol f g (PSCName s)    = tableColumnLookupIndex table s >>=
+                               pscol f g . PSCNum
+    pscol f g (PSCNExpr s e) = return $ g (s,e)
 
 evalPS :: PSCol -> Eval r [PSCol]
 evalPS (PSCExpr e) = do

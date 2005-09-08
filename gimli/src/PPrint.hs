@@ -3,7 +3,7 @@
 -- Pretty printing support
 
 module PPrint (
-    listToDoc,
+    listToDoc, trimPointZero,
     module Text.PrettyPrint.HughesPJ,
     PPrint(..)
 ) where
