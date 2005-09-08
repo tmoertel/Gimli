@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 60;
+use Test::More tests => 61;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -290,6 +290,12 @@ evals_exact_ok( "t <- table(x=1:3,y=[NA,1,3]); t[y==1]", <<EOF);
 EOF
 
 evals_ok( "$t; y<-4; x[y<-F]; y", 4);
+
+evals_exact_ok( "$t; x[ROW.ID %in% [1,3]]", <<EOF);
+  x  y z
+1 1 11 T
+2 3 13 T
+EOF
 
 
 #==============================================================================
