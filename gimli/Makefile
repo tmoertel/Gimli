@@ -56,7 +56,8 @@ wc:
 
 .PHONY: clean
 clean:
-	rm -f $(src_dir)/*.o $(src_dir)/*.hi $(app_dir)/gimli
+	find $(src_dir) \( -name '*.o' -o -name '*.hi' \) -print | xargs rm -f
+	rm -f $(app_dir)/gimli
 	rm -rf $(dist_dir)
 
 .PHONY: dist
@@ -65,4 +66,3 @@ dist:
 	mkdir -p $(dist_pkg)
 	rsync -aRC `cat MANIFEST` $(dist_pkg)
 	tar zcf $(dist_pkg).tar.gz -C $(dist_dir) $(package_name)-$(version)
-
