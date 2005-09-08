@@ -13,6 +13,7 @@ dist_pkg = $(dist_dir)/$(package_name)-$(version)
 
 gimli_packages = -package readline
 
+ghc      = ghc
 ghc_prof =
 ghc_opt  =
 ghc_opts += $(ghc_prof) $(ghc_opt)
@@ -24,7 +25,7 @@ all: $(app_dir)/gimli
 
 $(app_dir)/gimli: $(hsfiles)
 	@mkdir -p $(app_dir)
-	ghc $(ghc_opts) -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
+	$(ghc) $(ghc_opts) -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
 
 .PHONY: prof
 prof:
