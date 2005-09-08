@@ -84,8 +84,7 @@ sFn fname x     = ss fname . sParens x
 sFn2 fname x y  = ss fname . showParen True (commajoin [x,y])
 sPfx q p op e   = showParen (p > q) $ op . showsPrec q e
 sSfx q p op e   = showParen (p > q) $ showsPrec q e . op
-sIfx q p op l r = showParen (p > q) $ showsPrec q l . op
-                                    . showsPrec q r
+sIfx q p op l r = showParen (p > q) $ showsPrec q l . op . showsPrec q r
 
 commajoin, semijoin :: Show a => [a] -> ShowS
 xjoin _ [] = id
@@ -102,7 +101,7 @@ sBraces e       = ("{"++) . shows e . ("}"++)
 
 jOp JCartesian = ss "***"
 jOp (JNatural il l r ir) =
-    js l . ji il . ss "=" . ji ir . js r
+    ss " " . js l . ji il . ss "=" . ji ir . js r . ss " "
   where
     ji JInner = ss "="
     ji _      = ss "*"
