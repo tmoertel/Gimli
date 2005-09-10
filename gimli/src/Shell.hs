@@ -90,20 +90,31 @@ enterRepl s0 = do
 
 repl =
     getCommand >>=
-    return () `maybe` (\cmd -> eval cmd >>= liftIO . putStr >> repl)
+    (return () `maybe` \cmd -> evalPrint cmd >> repl)
+
+evalPrint cmd = do
+    (quiet, result) <- eval cmd
+    when (not quiet) . liftIO . putStr $ result
 
 eval cmd@(':':_)
     | Just cmdFn <- let c = head (words cmd) in
                     lookup c $ mapFst (take (length c)) sysCommands
-    = cmdFn cmd
+    = cmdFn cmd >>= return . ((,) False)
     | otherwise
-    = return $ "Unknown command: \"" ++ cmd ++ "\"\n"
+    = return (False, "Unknown command: \"" ++ cmd ++ "\"\n")
+
 eval cmd = do
-    result <- case parse cmd of
-        Left err   -> return ("syntax error: " ++ show err)
-        Right expr -> doEval expr >>= return . either ("error: " ++) pp
-    formatter <- getFormatter
-    return . unlines . formatter . lines $ result
+    case parse cmd'' of
+        Left err   -> return (False, "syntax error: " ++ show err ++ "\n")
+        Right expr -> doEval expr >>= either showError ppResult
+  where
+    quiet = last cmd' == ';'
+    cmd'  = reverse (dropWhile isSpace (reverse cmd))
+    cmd'' = if quiet then init cmd' else cmd'
+    showError e = return (False, "error: " ++ e ++ "\n")
+    ppResult r  = do
+        formatter <- getFormatter
+        return . ((,) quiet) . unlines . formatter . lines . pp $ r
 
 doEval expr = do
     st <- gets stEvalState

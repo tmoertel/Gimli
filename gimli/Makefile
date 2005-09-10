@@ -25,7 +25,7 @@ all: $(app_dir)/gimli
 
 $(app_dir)/gimli: $(hsfiles)
 	@mkdir -p $(app_dir)
-	$(ghc) $(ghc_opts) -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Main.hs
+	$(ghc) $(ghc_opts) -i$(src_dir) --make -o $@ $(gimli_packages) $(src_dir)/Shell.hs
 
 .PHONY: prof
 prof:
