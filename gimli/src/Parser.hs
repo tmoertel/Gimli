@@ -62,6 +62,7 @@ factor =
     <|> varExpr
     <|> tableExpr
     <|> fileExpr
+    <|> ifThenElseExpr
     <?> "simple expression"
 
 tableExpr =
@@ -99,6 +100,15 @@ bracketVectorExpr =
         (brackets (commaSep1 expr))
     <|> (reserved "c" >> parens (commaSep1 expr))
     <?> "vector constructor"
+
+ifThenElseExpr = do
+    reserved "if"
+    test <- expr
+    reserved "then"
+    trueExpr <- expr
+    reserved "else"
+    falseExpr <- expr
+    return (EIf test trueExpr falseExpr)
 
 scalarLiteralExpr =
         numberLiteralExpr

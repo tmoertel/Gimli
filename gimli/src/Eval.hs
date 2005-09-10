@@ -42,7 +42,9 @@ modifyEnv f (Env emap) = Env (f emap)
 
 envMap (Env emap) = emap
 
+-- ===========================================================================
 -- Eval monad
+-- ===========================================================================
 
 type EvalError   = String
 type EvalState   = Env
@@ -68,9 +70,11 @@ evalL x = eval x >>= bind "LAST" . EVal
 
 evalString e = eval e >>= asString
 evalTable e  = eval e >>= asTable
+evalBool e   = eval e >>= asBool
 evalVector e = eval e >>= asVector
 
 
+-- ===========================================================================
 {- | Evaluate an expression to result in a Value -}
 
 eval :: Expr -> Eval r Value
@@ -102,6 +106,10 @@ eval (EBinOp op el er) = do
 eval (ESeries es)
     | es == []  = return VNull
     | otherwise = foldr1 (>>) $ map evalL es
+
+eval (EIf etest etrue efalse) = do
+    t <- evalBool etest
+    eval (if t then etrue else efalse)
 
 eval (ESelect etarget eselect) = do
     target <- eval etarget

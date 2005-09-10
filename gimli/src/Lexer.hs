@@ -16,8 +16,10 @@ gimlLexer =
       { commentStart    = ""
       , commentEnd      = ""
       , commentLine     = "#"
-      , reservedNames   = ["T", "TRUE", "F", "FALSE", "NA", "NULL", "c"
-                          ,"table", "read.csv", "read.wsv", "write.wsv"]
+      , reservedNames   = words $
+                          " T TRUE F FALSE NA NULL c table" ++
+                          " read.csv read.wsv write.wsv" ++
+                          " if then else"
       , reservedOpNames = gimlOps
       , opStart         = oneOf . nub $ head gimlOps
       , opLetter        = oneOf . nub $ concatMap tail gimlOps

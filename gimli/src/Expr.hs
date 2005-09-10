@@ -31,6 +31,7 @@ data Expr
     | EReadWsv Expr
     | EWriteWsv Expr Expr
     | EJoin JoinOp Expr Expr
+    | EIf Expr Expr Expr
     deriving (Eq, Ord)
 
 instance Show Expr where
@@ -41,6 +42,9 @@ instance Show Expr where
     showsPrec _ (EWriteWsv e f)            = sFn2 "write.wsv" e f
     showsPrec _ (EVector es)               = ss "[" . commajoin es . ss "]"
     showsPrec _ (EVar s)                   = ss s
+    showsPrec _ (EIf e t f)                = ss "if " . shows e
+                                           . ss " then " . shows t
+                                           . ss " else " . shows f
     showsPrec _ (ETable nvps)              = ss "table" . showParen True nvps'
       where
         nvps' = xjoin "," $ map (\(i,e) -> ss i . ss "=" . shows e) nvps
