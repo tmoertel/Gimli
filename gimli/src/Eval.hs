@@ -23,13 +23,13 @@ import LoadData
 import PPrint
 import Utils
 
-type Closure    = (Env, Value, Maybe Expr)
+type Closure    = (Value, Maybe Expr)
 
-clEnv (e,_,_) = e
-clVal (_,v,_) = v
-clExp (_,v,x) = x
+clEnv _     = error "no environment in closure"
+clVal (v,_) = v
+clExp (v,x) = x
 
-nullClosure = (emptyEnv, VNull, Nothing)
+nullClosure = (VNull, Nothing)
 
 type EnvMap     = Map.Map Identifier Closure
 data Env        = Env EnvMap deriving (Show, Eq, Ord)
@@ -55,7 +55,7 @@ stEnv = id
 bind ident valExpr = do
     val <- eval valExpr
     env <- gets stEnv
-    modify $ modifyEnv $ Map.insert ident (env, val, Just valExpr)
+    modify $ modifyEnv $ Map.insert ident (val, Just valExpr)
     return val
 
 evalTop :: Expr -> IO (Either EvalError Value)
