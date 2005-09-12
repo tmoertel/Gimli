@@ -252,9 +252,6 @@ tableJoin (JNatural il lexps rexps ir) tl tr = savingEnv $ do
     return $
         naturalJoin (tl, lassocs, il==JOuter) (tr, rmap, rexps, ir==JOuter)
 
-tableJoin op _ _ =
-    throwError $ "this type of join (" ++ show op ++ ") is not implemented yet"
-
 naturalJoin (tl, lassocs, outL) (tr, rmap, rexps, outR) =
     mkTable (zip colnames colvecs)
   where
