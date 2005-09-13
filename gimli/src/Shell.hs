@@ -118,7 +118,9 @@ eval cmd = do
 
 doEval expr = do
     st <- gets stEvalState
-    (val, st') <-  liftIO $ Eval.run st expr
+    (val, st', logS) <-  liftIO $ Eval.run st expr
+    let msgs = logS []
+    when (not (null msgs)) (liftIO $ putStr (unlines msgs))
     putEvalState st'
     return val
 

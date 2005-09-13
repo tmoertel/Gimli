@@ -1,7 +1,7 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Eval (
-    eval, evalTop, run, emptyEnv,
+    eval, run, emptyEnv,
     clExp, clVal,
     envMap,
     EvalState
@@ -18,6 +18,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe
 
+import EvalMonad
 import Expr
 import LoadData
 import PPrint
@@ -48,7 +49,8 @@ envMap (Env emap) = emap
 
 type EvalError   = String
 type EvalState   = Env
-type Eval r a    = ErrorT EvalError (ContT r (StateT EvalState IO)) a
+type LogS        = [String] -> [String]
+type Eval r a    = EvalM EvalError EnvMap EvalState LogS r a
 
 stEnv = id
 
@@ -58,13 +60,9 @@ bind ident valExpr = do
     modify $ modifyEnv $ Map.insert ident (val, Just valExpr)
     return val
 
-evalTop :: Expr -> IO (Either EvalError Value)
-evalTop =
-    (`evalStateT` emptyEnv) . (`runContT` return) . runErrorT . evalL
-
-run :: EvalState -> Expr -> IO (Either EvalError Value, EvalState)
+run :: EvalState -> Expr -> IO (Either EvalError Value, EvalState, LogS)
 run st =
-    (`runStateT` st) . (`runContT` return) . runErrorT . evalL
+    runEval Map.empty st . evalL
 
 evalL x = eval x >>= bind "LAST" . EVal
 
