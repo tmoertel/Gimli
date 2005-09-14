@@ -16,8 +16,8 @@ import qualified System.Posix.Terminal as Terminal
 import qualified Version as Version
 import qualified Name as Name
 import qualified Parser as Parser
+import Expr (asNum)
 import qualified Eval as Eval
-import qualified Value as Value
 import PPrint
 import Utils
 
@@ -131,7 +131,7 @@ getFormatter = do
     cols <- getBindingValue "SYS.COLS" >>= asNumWithDefault 80
     return (mkFormatter rows cols)
   where
-    asNumWithDefault d v = return . maybe d round $ v >>= Value.asNum
+    asNumWithDefault d v = return . maybe d round $ v >>= asNum
 
 getBinding varname =
     gets (Eval.envMap . stEvalState) >>= return . Map.lookup varname

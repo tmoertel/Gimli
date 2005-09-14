@@ -1,15 +1,29 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Expr (
+
     Expr(..),
     BinOp(..), UnaryOp(..),
     PSpec(..), PSCol(..),
     JoinOp(..), JoinInclusion(..),
-    module Value
+
+    Value(..),
+        vIsVector, vIsTable,
+        toScalar,
+        asVector, asNum, asTable, asString, asBool,
+        mkVectorValue,
+
+    module CoreTypes,
+    module Scalar,
+    module Vector,
+    module Table,
 )
 where
 
-import Value
+import CoreTypes
+import Scalar
+import Vector
+import Table
 import PPrint
 
 -- ============================================================================
@@ -179,3 +193,68 @@ data JoinInclusion
     | JOuter
     deriving (Eq, Ord, Show)
 
+
+
+-- ============================================================================
+-- ============================================================================
+-- values
+-- ============================================================================
+-- ============================================================================
+
+
+data Value
+  = VVector Vector
+  | VTable Table
+  | VNull
+    deriving (Ord, Eq)
+
+instance Show Value where
+    showsPrec _ (VVector v) = shows v
+    showsPrec _ (VTable t)  = shows t
+    showsPrec _  VNull      = showString "NULL"
+
+instance PPrint Value where
+    toDoc (VVector v) = toDoc v
+    toDoc VNull       = text "NULL"
+    toDoc (VTable t)  = toDoc t
+--    toDoc x           = error $ "don't know how to pp " ++ show x
+
+vIsVector (VVector _) = True
+vIsVector _           = False
+
+vIsTable (VTable _)   = True
+vIsTable _            = False
+
+-- coercions
+
+asVector :: Monad m => Value -> m Vector
+asVector (VVector v) = return v
+asVector _           = fail "not a vector"
+
+asNum :: Monad m => Value -> m Double
+asNum v = asVector v >>= vecNum
+
+asTable :: Monad m => Value -> m Table
+asTable (VTable t) = return t
+asTable _          = fail "not a table"
+
+asString :: Monad m => Value -> m String
+asString v = asVector v >>= vecStr
+
+asBool :: Monad m => Value -> m Bool
+asBool v = asVector v >>= vecLog
+
+
+-- vector values
+
+instance ToVector [Value] where
+    toVector = mkVector . map toScalar
+
+toScalar (VVector (V _ _ (x:_))) = x
+toScalar _                       = SNa
+
+mkVectorValue :: [Scalar] -> Value
+mkVectorValue xs =
+    if vnull v then VNull else VVector v
+  where
+    v = mkVector xs

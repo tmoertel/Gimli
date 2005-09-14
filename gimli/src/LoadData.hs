@@ -12,7 +12,7 @@ import Text.ParserCombinators.Parsec (parseFromFile)
 import CSV.Parser
 import WSV.Parser
 import Parser
-import Value
+import Table
 
 loadCsvTable :: (MonadIO m, MonadError String m) => String -> m Table
 loadCsvTable path =
