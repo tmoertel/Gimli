@@ -1,11 +1,11 @@
 module Lexer where
 
+import Data.List (nub)
+import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as P
-
-import Data.List (nub)
 
 import qualified Utils as U
 
@@ -18,7 +18,6 @@ gimlLexer =
       , commentLine     = "#"
       , reservedNames   = words $
                           " T TRUE F FALSE NA NULL c table" ++
-                          " read.csv read.wsv write.wsv" ++
                           " if then else"
       , reservedOpNames = gimlOps
       , opStart         = oneOf . nub $ head gimlOps
@@ -33,6 +32,20 @@ gimlOps =  words "$ * / + ! % - == != < > <= >= <- -> : = [ ]"
         ++ words "| & || &&"
 
 joinOps =  "***" : U.combinations ["=*", "=", "=*"]
+
+isPrimative :: String -> Bool
+isPrimative s = Set.member s primativesSet
+
+primatives :: [String]
+primatives = pfile
+  where
+    pfile = map concat $
+            U.combinations [ words "read write"
+                           , words "."
+                           , words "csv tsv wsv"
+                           ]
+
+primativesSet = Set.fromList primatives
 
 runLex :: Show a => Parser a -> String -> IO ()
 runLex p input =

@@ -6,6 +6,8 @@ module Expr (
     BinOp(..), UnaryOp(..),
     PSpec(..), PSCol(..),
     JoinOp(..), JoinInclusion(..),
+    ArgList, Arg(..),
+    Primative(..),
 
     Value(..),
         vIsVector, vIsTable,
@@ -20,6 +22,8 @@ module Expr (
 )
 where
 
+import Data.List (intersperse)
+
 import CoreTypes
 import Scalar
 import Vector
@@ -30,30 +34,28 @@ import PPrint
 -- core expressions
 -- ============================================================================
 
+type Prog = [Expr] -- ^ A program is a series of expressions
+
 data Expr
-    = EVal Value
+    = EApp Expr [Expr]
     | EBinOp !BinOp Expr Expr
-    | EVector [Expr]
-    | EUOp !UnaryOp Expr
-    | ESeries [Expr]
-    | EVar Identifier
     | EBind Expr Expr
-    | ESelect Expr Expr
-    | EProject Expr PSpec
-    | ETable [(Identifier, Expr)]
-    | EReadCsv Expr
-    | EReadWsv Expr
-    | EWriteWsv Expr Expr
-    | EJoin JoinOp Expr Expr
     | EIf Expr Expr Expr
+    | EJoin JoinOp Expr Expr
+    | EPrimative Identifier
+    | EProject Expr PSpec
+    | ESelect Expr Expr
+    | ESeries [Expr]
+    | ETable [(Identifier, Expr)]
+    | EUOp !UnaryOp Expr
+    | EVal Value
+    | EVar Identifier
+    | EVector [Expr]
     deriving (Eq, Ord)
 
 instance Show Expr where
 
     showsPrec p (EVal v)                   = showsPrec p v
-    showsPrec _ (EReadCsv f)               = sFn "read.csv" f
-    showsPrec _ (EReadWsv f)               = sFn "read.wsv" f
-    showsPrec _ (EWriteWsv e f)            = sFn2 "write.wsv" e f
     showsPrec _ (EVector es)               = ss "[" . commajoin es . ss "]"
     showsPrec _ (EVar s)                   = ss s
     showsPrec _ (EIf e t f)                = ss "if " . shows e
@@ -62,6 +64,11 @@ instance Show Expr where
     showsPrec _ (ETable nvps)              = ss "table" . showParen True nvps'
       where
         nvps' = xjoin "," $ map (\(i,e) -> ss i . ss "=" . shows e) nvps
+
+    showsPrec p (EApp e args)              = let q = 12 in
+                                             showParen (p > q) $
+                                               (showsPrec q e) .
+                                               showParen True (commajoin args)
 
     showsPrec p (EUOp UOpNegate x)         = sPfx 11 p (ss "-") x
 
@@ -104,9 +111,10 @@ sPfx q p op e   = showParen (p > q) $ op . showsPrec q e
 sSfx q p op e   = showParen (p > q) $ showsPrec q e . op
 sIfx q p op l r = showParen (p > q) $ showsPrec q l . op . showsPrec q r
 
+xjoin :: String -> [ShowS] -> ShowS
+xjoin x xs = foldr (.) id $ intersperse (ss x) xs
+
 commajoin, semijoin :: Show a => [a] -> ShowS
-xjoin _ [] = id
-xjoin x xs = foldr1 (\l r -> l . ss x . r) xs
 commajoin  = xjoin ","  . map shows
 semijoin   = xjoin "; " . map shows
 
@@ -195,6 +203,26 @@ data JoinInclusion
 
 
 
+
+-- ============================================================================
+-- ============================================================================
+-- function/primative types
+-- ============================================================================
+-- ============================================================================
+
+type ArgList = [Arg]
+data Arg     = Arg
+    { argName :: String
+    }
+    deriving (Eq,Ord,Show,Read)
+
+data Primative = Prim
+    { primName :: String
+    , primArgs :: ArgList
+    }
+    deriving (Eq,Ord,Show,Read)
+
+
 -- ============================================================================
 -- ============================================================================
 -- values
@@ -205,19 +233,26 @@ data JoinInclusion
 data Value
   = VVector Vector
   | VTable Table
+  | VFunc ArgList Prog
+  | VPrim Primative
   | VNull
     deriving (Ord, Eq)
 
 instance Show Value where
-    showsPrec _ (VVector v) = shows v
-    showsPrec _ (VTable t)  = shows t
-    showsPrec _  VNull      = showString "NULL"
+    showsPrec _ (VVector v)       = shows v
+    showsPrec _ (VTable t)        = shows t
+    showsPrec _  VNull            = showString "NULL"
+    showsPrec _ (VFunc args prog) =
+        ss "function"
+        . showParen True (xjoin ", " (map (ss . argName) args))
+        . ss " { " . (xjoin "; " (map shows prog)) . ss " }"
+    showsPrec _ (VPrim prim)      = ss (primName prim)
 
 instance PPrint Value where
     toDoc (VVector v) = toDoc v
     toDoc VNull       = text "NULL"
     toDoc (VTable t)  = toDoc t
---    toDoc x           = error $ "don't know how to pp " ++ show x
+    toDoc x           = text (show x)
 
 vIsVector (VVector _) = True
 vIsVector _           = False

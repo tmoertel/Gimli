@@ -1,3 +1,5 @@
+{-# OPTIONS -fglasgow-exts #-}
+
 module Scalar (
     Scalar(..),
     toSStr, toSNum, toSLog,

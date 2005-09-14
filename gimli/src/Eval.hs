@@ -74,11 +74,22 @@ evalVector e = eval e >>= asVector
 
 -- ===========================================================================
 {- | Evaluate an expression to result in a Value -}
+-- ===========================================================================
 
 eval :: Expr -> Eval r Value
 
 eval (EVal v) =
     return v
+
+eval (EApp (EVal (VVector (V _ _ [SStr fname]))) args) =
+    eval (EApp (EVar fname) args)
+
+eval (EApp fnExp argExps) = do
+    fn <- eval fnExp
+    case fn of
+        VPrim prim      -> doPrim prim argExps
+        VFunc args prog -> throwError "non-primative functions not implemented"
+        x               -> throwError "cannot apply non-function"
 
 eval (EVector es) = do
     vecs <- argof "vector constructor" $ mapM evalVector es
@@ -128,23 +139,6 @@ eval (EJoin joinType eltarg ertarg) = do
 eval (EProject etarget pspec) = do
     table <- arg1of "$" (evalTable etarget)
     project table pspec
-
-eval (EReadCsv efile) =
-    liftM VTable $ loadCsvTable =<< argof "read.csv" (evalString efile)
-
-eval (EReadWsv efile) =
-    liftM VTable $ loadWsvTable =<< argof "read.csv" (evalString efile)
-
-eval (EWriteWsv etable efile) = do
-    table <- arg1of nm $ evalTable etable
-    file  <- arg2of nm $ evalString efile
-    during "write.wsv" $ do
-        result <- liftIO . try $ writeFile file (pp table ++ "\n")
-        case result of
-            Left err -> throwError (show err)
-            Right x  -> return (mkVectorValue [SStr file])
-  where
-    nm = "write.csv"
 
 eval (ETable ecolspecs) = do
     vecs <- argof nm $ mapM evalVector evecs
@@ -485,3 +479,36 @@ vectorize' op (VVector vx) (VVector vy) =
     vy' = cycle (vlist vy)
 
 vectorize' _ _ _ = throwError "vector operation requires two vectors"
+
+
+
+-- ============================================================================
+-- primative functions
+-- ============================================================================
+
+
+doPrim (prim@Prim { primName=name }) args =
+    case name of
+    "read.csv"  -> prim1 doReadCsv
+    "read.wsv"  -> prim1 doReadWsv
+    "write.wsv" -> prim2 doWriteWsv
+  where
+    prim1 f = f name (args !! 0)
+    prim2 f = f name (args !! 0) (args !! 1)
+
+
+doReadCsv nm efile =
+    liftM VTable $ loadCsvTable =<< argof nm (evalString efile)
+
+doReadWsv nm efile =
+    liftM VTable $ loadWsvTable =<< argof nm (evalString efile)
+
+doWriteWsv nm etable efile = do
+    table <- arg1of nm $ evalTable etable
+    file  <- arg2of nm $ evalString efile
+    during "write.wsv" $ do
+        result <- liftIO . try $ writeFile file (pp table ++ "\n")
+        case result of
+            Left err -> throwError (show err)
+            Right x  -> return (mkVectorValue [SStr file])
+

@@ -61,19 +61,11 @@ factor =
     <|> vectorExpr
     <|> varExpr
     <|> tableExpr
-    <|> fileExpr
     <|> ifThenElseExpr
     <?> "simple expression"
 
 tableExpr =
     reserved "table" >> parens (commaSep1 nvpair) >>= return . ETable
-
-fileExpr =
-        filex "read.csv" expr EReadCsv
-    <|> filex "read.wsv" expr EReadWsv
-    <|> filex "write.wsv" (commaPair expr expr) (uncurry EWriteWsv)
-  where
-    filex s p ctor = reserved s >> parens p >>= return . ctor
 
 commaPair =
     sepPair comma
@@ -84,8 +76,9 @@ sepPair psep p1 p2 = do
     e2 <- p2
     return (e1, e2)
 
-varExpr =
-    identifier >>= return . EVar
+varExpr = do
+    s <- identifier
+    return $ if isPrimative s then EVal (VPrim $ Prim s []) else EVar s
 
 nullExpr = do
     reserved "NULL" <|> try (brackets $ return ())
@@ -130,9 +123,11 @@ nvpair = do
     return (name, val)
 
 opTable =
-    [ [ pfop  "-" UOpNegate
+    [ [ sfop "("  EApp (commaSep expr `followedBy` symbol ")")
       ]
-    , [ voplx ":" BinOpEllipses
+    , [ pfop  "-" UOpNegate
+      ]
+    , [ voplx ":" BinOpEllipses  -- use voplx so that -3:-1 parses
       ]
     , [ sfop  "$" EProject pspecExpr
       , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
