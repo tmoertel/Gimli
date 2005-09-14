@@ -12,6 +12,7 @@ import Text.ParserCombinators.Parsec
 import ExprParser
 import Expr
 import Lexer
+import Primatives
 
 gimlParse =
     parse $ do
@@ -78,7 +79,10 @@ sepPair psep p1 p2 = do
 
 varExpr = do
     s <- identifier
-    return $ if isPrimative s then EVal (VPrim $ Prim s []) else EVar s
+    return (primOrVar s)
+
+primOrVar s = 
+    if isPrimative s then EVal (VPrim $ Prim s []) else EVar s
 
 nullExpr = do
     reserved "NULL" <|> try (brackets $ return ())
@@ -144,7 +148,7 @@ opTable =
     , [ vopl  "+" BinOpAdd
       , vopl  "-" BinOpSub
       ]
-    , [ voplx "%in%" BinOpIn
+    , [ infixlFn
       ]
     , [ vopl  "==" BinOpEq
       , vopl  "!=" BinOpNeq
@@ -176,6 +180,11 @@ opTable =
                         symbol s
                         x <- p
                         return $ \t -> ctor t x
+    infixlFn      = Infix ifn AssocLeft
+      where
+        ifn       = between pct pct identifier >>= return . apf
+        apf s l r = EApp (primOrVar s) [l,r]
+        pct       = symbol "%"
     op a f assoc  = Infix (reservedOp a >> return f) assoc
     opx a f assoc = Infix (symbol a >> return f) assoc
     jopr s ctor   = Infix (try joinExpr) AssocRight

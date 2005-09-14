@@ -85,8 +85,6 @@ instance Show Expr where
     showsPrec p (EBinOp BinOpAdd      l r) = sIfx  6 p (ss " + ") l r
     showsPrec p (EBinOp BinOpSub      l r) = sIfx  6 p (ss " - ") l r
 
-    showsPrec p (EBinOp BinOpIn       l r) = sIfx  5 p (ss " %in% ") l r
-
     showsPrec p (EBinOp BinOpEq       l r) = sIfx  4 p (ss " == ") l r
     showsPrec p (EBinOp BinOpGe       l r) = sIfx  4 p (ss " >= ") l r
     showsPrec p (EBinOp BinOpGt       l r) = sIfx  4 p (ss " > ")  l r
@@ -145,7 +143,6 @@ data BinOp
     | BinOpEllipses
     | BinOpGt | BinOpGe | BinOpLt | BinOpLe
     | BinOpSOr | BinOpSAnd | BinOpVOr | BinOpVAnd
-    | BinOpIn
     deriving  (Show, Read, Eq, Ord)
 
 data UnaryOp

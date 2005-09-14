@@ -398,7 +398,6 @@ negOne = V VTNum 1 [SNum (-1.0)]
 binOp :: BinOp -> Value -> Value -> Eval r Value
 
 binOp BinOpEllipses = doEllipses
-binOp BinOpIn       = doInSet
 
 binOp BinOpTimes    = numOp (*)
 binOp BinOpDiv      = numOp (/)
@@ -433,13 +432,6 @@ doEllipses start end = do
     return $ mkVectorValue $ map SNum [ s .. e ]
   where
     nm = "(:) operator"
-
-doInSet velems vset = do
-    es  <- arg1of nm $ liftM vlist (asVector velems)
-    set <- arg2of nm $ liftM (Set.fromList . vlist) (asVector vset)
-    return . mkVectorValue $ map (SLog . (`Set.member` set)) es
-  where
-    nm = "%in% operator"
 
 valNum x =
     case toSNum x of
@@ -489,21 +481,27 @@ vectorize' _ _ _ = throwError "vector operation requires two vectors"
 
 doPrim (prim@Prim { primName=name }) args =
     case name of
-    "read.csv"  -> prim1 doReadCsv
-    "read.wsv"  -> prim1 doReadWsv
-    "write.wsv" -> prim2 doWriteWsv
+    "in"        -> prim2 primIn
+    "read.csv"  -> prim1 primReadCsv
+    "read.wsv"  -> prim1 primReadWsv
+    "write.wsv" -> prim2 primWriteWsv
   where
     prim1 f = f name (args !! 0)
     prim2 f = f name (args !! 0) (args !! 1)
 
 
-doReadCsv nm efile =
+primIn nm velems vset = do
+    es  <- arg1of nm $ liftM vlist (evalVector velems)
+    set <- arg2of nm $ liftM (Set.fromList . vlist) (evalVector vset)
+    return . mkVectorValue $ map (SLog . (`Set.member` set)) es
+
+primReadCsv nm efile =
     liftM VTable $ loadCsvTable =<< argof nm (evalString efile)
 
-doReadWsv nm efile =
+primReadWsv nm efile =
     liftM VTable $ loadWsvTable =<< argof nm (evalString efile)
 
-doWriteWsv nm etable efile = do
+primWriteWsv nm etable efile = do
     table <- arg1of nm $ evalTable etable
     file  <- arg2of nm $ evalString efile
     during "write.wsv" $ do

@@ -33,20 +33,6 @@ gimlOps =  words "$ * / + ! % - == != < > <= >= <- -> : = [ ]"
 
 joinOps =  "***" : U.combinations ["=*", "=", "=*"]
 
-isPrimative :: String -> Bool
-isPrimative s = Set.member s primativesSet
-
-primatives :: [String]
-primatives = pfile
-  where
-    pfile = map concat $
-            U.combinations [ words "read write"
-                           , words "."
-                           , words "csv tsv wsv"
-                           ]
-
-primativesSet = Set.fromList primatives
-
 runLex :: Show a => Parser a -> String -> IO ()
 runLex p input =
     (`parseTest` input) $ do
