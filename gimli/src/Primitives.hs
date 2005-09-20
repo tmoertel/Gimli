@@ -1,16 +1,16 @@
-module Primatives (
-    isPrimative
+module Primitives (
+    isPrimitive
 )
 where
 
 import qualified Data.Set as Set
 import qualified Utils as U
 
-isPrimative :: String -> Bool
-isPrimative s = Set.member s primativesSet
+isPrimitive :: String -> Bool
+isPrimitive s = Set.member s primitivesSet
 
-primatives :: [String]
-primatives = pfile ++ words "in" ++ ises
+primitives :: [String]
+primitives = pfile ++ words "in" ++ ises
   where
     pfile = map concat $
             U.combinations [ words "read write"
@@ -19,4 +19,4 @@ primatives = pfile ++ words "in" ++ ises
                            ]
     ises = map ("is." ++) $ words "na"
 
-primativesSet = Set.fromList primatives
+primitivesSet = Set.fromList primitives

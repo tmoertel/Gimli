@@ -12,7 +12,7 @@ import Text.ParserCombinators.Parsec
 import ExprParser
 import Expr
 import Lexer
-import Primatives
+import Primitives
 
 gimlParse =
     parse $ do
@@ -77,7 +77,7 @@ varExpr = do
     return (primOrVar s)
 
 primOrVar s =
-    if isPrimative s then EVal (VPrim $ Prim s []) else EVar s
+    if isPrimitive s then EVal (VPrim $ Prim s []) else EVar s
 
 nullExpr = do
     reserved "NULL" <|> try (brackets $ return ())

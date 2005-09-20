@@ -7,7 +7,7 @@ module Expr (
     PSpec(..), PSCol(..),
     JoinOp(..), JoinInclusion(..),
     ArgList, Arg(..),
-    Primative(..),
+    Primitive(..),
 
     Value(..),
         vIsVector, vIsTable,
@@ -42,7 +42,7 @@ data Expr
     | EBind Expr Expr
     | EIf Expr Expr Expr
     | EJoin JoinOp Expr Expr
-    | EPrimative Identifier
+    | EPrimitive Identifier
     | EProject Expr PSpec
     | ESelect Expr Expr
     | ESeries [Expr]
@@ -209,7 +209,7 @@ data JoinInclusion
 
 -- ============================================================================
 -- ============================================================================
--- function/primative types
+-- function/primitive types
 -- ============================================================================
 -- ============================================================================
 
@@ -219,7 +219,7 @@ data Arg     = Arg
     }
     deriving (Eq,Ord,Show,Read)
 
-data Primative = Prim
+data Primitive = Prim
     { primName :: String
     , primArgs :: ArgList
     }
@@ -237,7 +237,7 @@ data Value
   = VVector Vector
   | VTable Table
   | VFunc ArgList Prog
-  | VPrim Primative
+  | VPrim Primitive
   | VNull
     deriving (Ord, Eq)
 

@@ -88,7 +88,7 @@ eval (EApp fnExp argExps) = do
     fn <- eval fnExp
     case fn of
         VPrim prim      -> doPrim prim argExps
-        VFunc args prog -> throwError "non-primative functions not implemented"
+        VFunc args prog -> throwError "non-primitive functions not implemented"
         x               -> throwError "cannot apply non-function"
 
 eval (EVector es) = do
@@ -494,10 +494,10 @@ vectorize' _ _ _ = throwError "vector operation requires two vectors"
 
 
 -- ============================================================================
--- primative functions
+-- primitive functions
 -- ============================================================================
 
-doPrim :: Primative -> [Expr] -> Eval r Value
+doPrim :: Primitive -> [Expr] -> Eval r Value
 doPrim (prim@Prim { primName=name }) args =
     case name of
     "in"        -> prim2 primIn
