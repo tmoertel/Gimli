@@ -27,7 +27,7 @@ data Scalar      -- ^ scalar value
 instance Show Scalar where
     showsPrec _ (SStr s) = shows s
     showsPrec _ (SNum n) = showString . trimPointZero $ show n
-    showsPrec _ (SLog b) = shows b
+    showsPrec _ (SLog b) = showString (if b then "T" else "F")
     showsPrec _  SNa     = showString "NA"
     showsPrec _  SNull   = showString "NULL"
 
