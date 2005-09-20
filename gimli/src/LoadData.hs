@@ -1,7 +1,7 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module LoadData (
-    loadCsvTable, loadWsvTable
+    loadCsvTable, loadWsvTable, loadTsvTable
 )
 where
 
@@ -11,6 +11,7 @@ import Text.ParserCombinators.Parsec (parseFromFile)
 
 import CSV.Parser
 import WSV.Parser
+import TSV.Parser
 import Parser
 import Table
 
@@ -21,6 +22,10 @@ loadCsvTable path =
 loadWsvTable :: (MonadIO m, MonadError String m) => String -> m Table
 loadWsvTable path =
     loadTable wsvFile path
+
+loadTsvTable :: (MonadIO m, MonadError String m) => String -> m Table
+loadTsvTable path =
+    loadTable tsvFile path
 
 loadTable parser path =
     loadFile parser path >>= gimlParseTable

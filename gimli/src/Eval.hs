@@ -13,7 +13,7 @@ import Control.Monad.Error
 import Control.Monad.State
 import Data.Array
 import Data.Either
-import Data.List (group, transpose, (\\))
+import Data.List (group, intersperse, transpose, (\\))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe
@@ -483,30 +483,48 @@ doPrim (prim@Prim { primName=name }) args =
     case name of
     "in"        -> prim2 primIn
     "read.csv"  -> prim1 primReadCsv
+    "read.tsv"  -> prim1 primReadTsv
     "read.wsv"  -> prim1 primReadWsv
+    "write.csv" -> prim2 primWriteCsv
+    "write.tsv" -> prim2 primWriteTsv
     "write.wsv" -> prim2 primWriteWsv
   where
-    prim1 f = f name (args !! 0)
-    prim2 f = f name (args !! 0) (args !! 1)
-
+    prim1 f = case args of
+        [x] -> f name x
+        _   -> argErr 1
+    prim2 f = case args of
+        [x,y] -> f name x y
+        _     -> argErr 2
+    argErr n = throwError $ name ++ " requires " ++ show n
+                                 ++ " argument(s), not " ++ show (length args)
 
 primIn nm velems vset = do
     es  <- arg1of nm $ liftM vlist (evalVector velems)
     set <- arg2of nm $ liftM (Set.fromList . vlist) (evalVector vset)
     return . mkVectorValue $ map (SLog . (`Set.member` set)) es
 
-primReadCsv nm efile =
-    liftM VTable $ loadCsvTable =<< argof nm (evalString efile)
+primReadCsv = primReadX loadCsvTable
+primReadTsv = primReadX loadTsvTable
+primReadWsv = primReadX loadWsvTable
 
-primReadWsv nm efile =
-    liftM VTable $ loadWsvTable =<< argof nm (evalString efile)
+primReadX parser nm efile =
+    liftM VTable $ parser =<< argof nm (evalString efile)
 
-primWriteWsv nm etable efile = do
+primWriteCsv = primWriteX (printXsv ",")
+primWriteTsv = primWriteX (printXsv "\t")
+primWriteWsv = primWriteX (\v -> pp v ++ "\n")
+
+printXsv sep table =
+    unlines . map (concat . intersperse sep) . (headings:) $ map (map pp) rows
+  where
+    headings = tcnames table
+    rows     = trows table
+
+primWriteX printer nm etable efile = do
     table <- arg1of nm $ evalTable etable
     file  <- arg2of nm $ evalString efile
-    during "write.wsv" $ do
-        result <- liftIO . try $ writeFile file (pp table ++ "\n")
+    during nm $ do
+        result <- liftIO . try $ writeFile file (printer table)
         case result of
             Left err -> throwError (show err)
             Right x  -> return (mkVectorValue [SStr file])
-
