@@ -139,13 +139,13 @@ opTable =
       , jopr  "*=*" $ \l r -> EJoin (JNatural JOuter l r JOuter)
       , eopr  "***" $ EJoin JCartesian
       ]
+    , [ infixlFn
+      ]
     , [ vopl  "*" BinOpTimes
       , vopl  "/" BinOpDiv
       ]
     , [ vopl  "+" BinOpAdd
       , vopl  "-" BinOpSub
-      ]
-    , [ infixlFn
       ]
     , [ vopl  "==" BinOpEq
       , vopl  "!=" BinOpNeq
