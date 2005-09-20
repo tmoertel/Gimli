@@ -11,6 +11,10 @@ import Control.Monad.RWS
 import Control.Monad.Cont
 import Control.Monad.Error
 
+-- ============================================================================
+-- core monad
+-- ============================================================================
+
 type EvalM err env state log prompt a =
     ErrorT err (ContT prompt (RWST env log state IO)) a
 
@@ -29,6 +33,11 @@ shift e     = ContT $ \k -> runContT (e $ \v -> ContT $ \c -> k v >>= c) return
 reset e     = ContT $ \k -> runContT e return >>= k
 shiftEval e = ErrorT $ shift $ \c -> runErrorT (e (ErrorT . c . Right))
 resetEval m = ErrorT $ reset (runErrorT m)
+
+-- ============================================================================
+-- GIML evaluator types
+-- ============================================================================
+
 
 
 {-
