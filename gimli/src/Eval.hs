@@ -480,10 +480,11 @@ vectorize' _ _ _ = throwError "vector operation requires two vectors"
 -- primative functions
 -- ============================================================================
 
-
+doPrim :: Primative -> [Expr] -> Eval r Value
 doPrim (prim@Prim { primName=name }) args =
     case name of
     "in"        -> prim2 primIn
+    "is.na"     -> prim1 primIsNa
     "read.csv"  -> prim1 primReadCsv
     "read.tsv"  -> prim1 primReadTsv
     "read.wsv"  -> prim1 primReadWsv
@@ -504,6 +505,14 @@ primIn nm velems vset = do
     es  <- arg1of nm $ liftM vlist (evalVector velems)
     set <- arg2of nm $ liftM (Set.fromList . vlist) (evalVector vset)
     return . mkVectorValue $ map (SLog . (`Set.member` set)) es
+
+primIsNa nm arg = do
+    argVal <- eval arg
+    case argVal of
+        VVector v -> vectorize (binWrap SLog return (==)) naVecVal argVal
+        _         -> return $ VVector falseVector
+  where
+    naVecVal = VVector naVector
 
 primReadCsv = primReadX loadCsvTable
 primReadTsv = primReadX loadTsvTable

@@ -2,6 +2,7 @@
 
 module Vector (
     Vector(..), ToVector(..),
+        naVector, falseVector, trueVector,
         vlen, vtype, vlist, vmap, vnull,
         vecNum, vecLog, vecStr,
         vectorCoerce, mkVector, mkVectorOfType,
@@ -96,3 +97,7 @@ vtCoerce _ SNull  = Nothing
 vtCoerce VTStr x  = Just . keepNAs toSStr $ x
 vtCoerce VTNum x  = Just . keepNAs toSNum $ x
 vtCoerce VTLog x  = Just . keepNAs toSLog $ x
+
+naVector    = mkVector [SNa]
+falseVector = mkVector [SLog False]
+trueVector  = mkVector [SLog True]
