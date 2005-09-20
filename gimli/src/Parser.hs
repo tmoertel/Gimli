@@ -48,11 +48,6 @@ selectExpr = (<?> "selection") $ do
     selects <- try $ many1 (brackets expr)
     return $ foldl1 ESelect (target:selects)
 
-projectExpr = (<?> "projection") $ do
-    target <- infixExpr
-    reservedOp "$"
-    pspecExpr >>= return . EProject target
-
 infixExpr =
     buildExpressionParser opTable factor
 
@@ -135,7 +130,7 @@ opTable =
       ]
     , [ voplx ":" BinOpEllipses  -- use voplx so that -3:-1 parses
       ]
-    , [ sfop  "$" EProject pspecExpr
+    , [ sfop  "$" (\t x -> x t) pspecExpr
       , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
       ]
     , [ jopr  "===" $ \l r -> EJoin (JNatural JInner l r JInner)
@@ -201,23 +196,27 @@ opTable =
 -- projection specs
 
 pspecExpr =
-    pspecVector <|> pspecTable
+        (pspecVector >>= return . flip EProject)
+    <|> pspecTableSeries
 
 pspecVector =
         (integer >>= return . PSVectorNum . fromInteger)
     <|> (identifier >>= return . PSVectorName)
 
-pspecTable = parens $ do
+pspecTableSeries = parens $ do
+    semiSep1 pspecTable >>= return . foldr (flip (.)) id
+
+pspecTable = do
     negated <- option False (char '-' >> return True)
-    commaSep1 pspecElem >>= return . PSTable negated
+    commaSep1 pspecElem >>= return . flip EProject . PSTable negated
 
 pspecElem =
         try (do i <- integer
-                notFollowedBy (noneOf ",)")
+                notFollowedBy (noneOf ",;)")
                 return . PSCNum $ fromInteger i)
     <|> try pspecNameEqualsExpr
     <|> try (do s <- identifier
-                notFollowedBy (noneOf ",)")
+                notFollowedBy (noneOf ",;)")
                 return $ PSCName s)
     <|> (reservedOp "*" >> return PSCStar)
     <|> (expr >>= return . PSCExpr)
