@@ -139,7 +139,8 @@ jOp (JNatural il l r ir) =
 -- ============================================================================
 
 data BinOp
-    = BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
+    = BinOpPower
+    | BinOpTimes | BinOpDiv | BinOpAdd | BinOpSub | BinOpEq | BinOpNeq
     | BinOpEllipses
     | BinOpGt | BinOpGe | BinOpLt | BinOpLe
     | BinOpSOr | BinOpSAnd | BinOpVOr | BinOpVAnd

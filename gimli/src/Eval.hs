@@ -399,6 +399,8 @@ binOp :: BinOp -> Value -> Value -> Eval r Value
 
 binOp BinOpEllipses = doEllipses
 
+binOp BinOpPower    = numOp (**)
+
 binOp BinOpTimes    = numOp (*)
 binOp BinOpDiv      = numOp (/)
 binOp BinOpAdd      = numOp (+)

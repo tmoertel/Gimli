@@ -129,6 +129,8 @@ nvpair = do
 opTable =
     [ [ sfop "("  EApp (commaSep expr `followedBy` symbol ")")
       ]
+    , [ vopr  "^" BinOpPower
+      ]
     , [ pfop  "-" UOpNegate
       ]
     , [ voplx ":" BinOpEllipses  -- use voplx so that -3:-1 parses
