@@ -76,7 +76,7 @@ varExpr = do
     s <- identifier
     return (primOrVar s)
 
-primOrVar s = 
+primOrVar s =
     if isPrimative s then EVal (VPrim $ Prim s []) else EVar s
 
 nullExpr = do
@@ -206,8 +206,15 @@ pspecVector =
 pspecTableSeries = parens $ do
     semiSep1 pspecTable >>= return . foldr (flip (.)) id
 
-pspecTable = do
-    negated <- option False (char '-' >> return True)
+pspecTable =
+      pspecTableAdditiveOverlay <|> pspecTableStraight
+
+pspecTableAdditiveOverlay = do
+    symbol "+"
+    commaSep1 nvpair >>= return . flip EProject . PSTableOverlay
+
+pspecTableStraight = do
+    negated <- option False (symbol "-" >> return True)
     commaSep1 pspecElem >>= return . flip EProject . PSTable negated
 
 pspecElem =

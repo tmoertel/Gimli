@@ -313,6 +313,17 @@ project table (PSVectorNum n) =
 project table (PSVectorName s) =
     (project table . PSVectorNum) =<< tableColumnLookupIndex table s
 
+project table (PSTableOverlay nvps) =
+    project table (PSTable False pscols)
+  where
+    pscols      = map expForCol (colNames ++ newNvpCols)
+    colNames    = tcnames table
+    colNamesMap = Map.fromList [(n,EVar n) | n <- colNames]
+    overlayMap  = Map.fromList nvps
+    newNvpCols  = filter (not . flip Map.member colNamesMap) $ map fst nvps
+    expForCol c = PSCNExpr c . fromJust $
+                  Map.lookup c overlayMap `mplus` Map.lookup c colNamesMap
+
 project table (PSTable True pscols) = do
     colIndexes <- mapM getIndex =<< expandSpecials table (removeStars pscols)
     project table . PSTable False . map PSCNum $

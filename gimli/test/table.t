@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 63;
+use Test::More tests => 66;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -243,6 +243,30 @@ evals_exact_ok( "$t; x\$(-c(2,1))", <<EOF);
 EOF
 
 evals_ok( "$t; x\$((NULL))", qr/error: .* vector/x );
+
+
+# additive overlay projection
+
+evals_exact_ok( "$t; x\$(+x=x-1)", <<EOF);
+  x  y z
+1 0 11 T
+2 1 12 F
+3 2 13 T
+EOF
+
+evals_exact_ok( "$t; x\$(+y=x,x=y)", <<EOF);
+   x y z
+1 11 1 T
+2 12 2 F
+3 13 3 T
+EOF
+
+evals_exact_ok( "$t; x\$(+x=x-1, q=x)", <<EOF);
+  x  y z q
+1 0 11 T 1
+2 1 12 F 2
+3 2 13 T 3
+EOF
 
 
 # serial projection

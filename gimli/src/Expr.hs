@@ -158,6 +158,7 @@ instance PPrint Expr
 
 data PSpec
     = PSTable Bool [PSCol]    -- ^ build a new table by spec
+    | PSTableOverlay [(Identifier, Expr)]  -- ^ additively overlay columns
     | PSVectorName Identifier -- ^ extract vector by column name
     | PSVectorNum Int         -- ^ extract vector by column number
     deriving (Eq, Ord)
@@ -168,7 +169,9 @@ instance Show PSpec where
     showsPrec _ (PSTable b pscs)  = showParen True $ b' . commajoin pscs
       where
         b' = if b then ss "-" else id
-
+    showsPrec _ (PSTableOverlay nvps)
+                                  = showParen True $ ss "+"
+                                  . (xjoin "," $ map showsNvp nvps)
 
 data PSCol
     = PSCNum Int                -- ^ column number
@@ -181,9 +184,11 @@ data PSCol
 instance Show PSCol where
     showsPrec _ (PSCNum i)     = shows i
     showsPrec _ (PSCName s)    = ss s
-    showsPrec _ (PSCNExpr s e) = ss s . ss "=" . shows e
+    showsPrec _ (PSCNExpr s e) = showsNvp (s,e)
     showsPrec _ (PSCStar)      = ss "*"
     showsPrec _ (PSCExpr e)    = shows e
+
+showsNvp (s,e) = ss s . ss "=" . shows e
 
 -- ============================================================================
 -- join operators
