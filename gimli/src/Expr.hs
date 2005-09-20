@@ -186,7 +186,7 @@ instance Show PSCol where
     showsPrec _ (PSCName s)    = ss s
     showsPrec _ (PSCNExpr s e) = showsNvp (s,e)
     showsPrec _ (PSCStar)      = ss "*"
-    showsPrec _ (PSCExpr e)    = shows e
+    showsPrec _ (PSCExpr e)    = showParen True $ shows e
 
 showsNvp (s,e) = ss s . ss "=" . shows e
 

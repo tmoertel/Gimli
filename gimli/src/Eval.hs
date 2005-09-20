@@ -349,12 +349,27 @@ project table (PSTable False pscols) = savingEnv $ do
                                pscol f g . PSCNum
     pscol f g (PSCNExpr s e) = return $ g (s,e)
 
+expandSpecials table pscs =
+    liftM concat (mapM evalPS (expandStars table pscs))
+
+expandStars table =
+    concatMap starExpand
+  where
+    starExpand PSCStar = map PSCNum (range . bounds $ tcols table)
+    starExpand x       = [x]
+
 evalPS :: PSCol -> Eval r [PSCol]
 evalPS (PSCExpr e) = do
     vec <- argof nm (evalVector e)
-    return [ PSCNum (round n) | SNum n <- vlist vec ]
+    return $ mapMaybe toCol (vlist vec)
   where
     nm = "projection-specification subexpression"
+    toCol x = case x of
+        SNum n -> Just $ PSCNum (round n)
+        SStr s -> Just $ PSCName s
+        _      -> Nothing
+
+
 evalPS psc = return [psc]
 
 
@@ -376,15 +391,6 @@ removeStars =
   where
     isStar PSCStar = True
     isStar _       = False
-
-expandSpecials table pscs =
-    liftM concat (mapM evalPS (expandStars table pscs))
-
-expandStars table =
-    concatMap starExpand
-  where
-    starExpand PSCStar = map PSCNum (range . bounds $ tcols table)
-    starExpand x       = [x]
 
 
 -- ============================================================================
