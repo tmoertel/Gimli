@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -17,3 +17,7 @@ like( run_gimli(":?\n:?"), qr/Commands I know.*Commands I know/s,
 
 evals_ok( "1" , "1" );
 evals_ok( "1;", ""  );
+
+# prompt continuation
+
+evals_ok( "1+\n2", 3 );

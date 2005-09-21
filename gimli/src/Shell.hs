@@ -9,6 +9,7 @@ import Data.Char
 import qualified Data.Map as Map
 import Data.Maybe
 import System.Environment (getEnv)
+import Text.ParserCombinators.Parsec.Error
 
 import qualified System.Console.Readline as LE
 import qualified System.Posix.Terminal as Terminal
@@ -33,7 +34,7 @@ main = do
     when term welcome
     enterRepl =<< initialState term
     when term $ putStrLn "Exiting."
-    
+
 
 initialState term =
     (`execStateT` s0) . (`runContT` return) $ do
@@ -45,9 +46,10 @@ initialState term =
     defaults =
         if term then [ "SYS.ROWS <- 10; SYS.COLS <- 80" ]
         else         [ "SYS.ROWS <- 1e9; SYS.COLS <- 1e9" ]
-    s0 = ReplState { stExit = undefined
-                   , stTerminal = term
+    s0 = ReplState { stExit      = undefined
+                   , stTerminal  = term
                    , stEvalState = Eval.emptyEnv
+                   , stContinue  = Nothing
                    }
 
 welcome =
@@ -70,6 +72,7 @@ data ReplState r a =
     ReplState { stExit      :: a -> ContT r (StateT (ReplState r a) IO) a
               , stTerminal  :: Bool
               , stEvalState :: Eval.EvalState
+              , stContinue  :: Maybe String
               }
 
 exit val =
@@ -104,17 +107,33 @@ eval cmd@(':':_)
     = return (False, "Unknown command: \"" ++ cmd ++ "\"\n")
 
 eval cmd = do
+    noContinue
     case parse cmd'' of
-        Left err   -> return (False, "syntax error: " ++ show err ++ "\n")
-        Right expr -> doEval expr >>= either showError ppResult
+        Left err   -> do
+            case errorMessages err of
+                SysUnExpect "" : _ -> do  -- check for EOF error
+                    evalContinue parseError cmd''
+                _ -> parseError
+            where
+              parseError = do
+                  noContinue
+                  return (False, "syntax error: " ++ show err ++ "\n")
+        Right expr -> do
+            modify $ \st -> st { stContinue = Nothing }
+            doEval expr >>= either showError ppResult
   where
     quiet = last cmd' == ';'
     cmd'  = reverse (dropWhile isSpace (reverse cmd))
     cmd'' = if quiet then init cmd' else cmd'
+    noContinue = modify $ \st -> st { stContinue = Nothing }
     showError e = return (False, "error: " ++ e ++ "\n")
     ppResult r  = do
         formatter <- getFormatter
         return . ((,) quiet) . unlines . formatter . lines . pp $ r
+
+evalContinue err cmd = do
+    modify $ \st -> st { stContinue = Just $ cmd }
+    getCommand >>= maybe err (eval . ((cmd++"\n")++))
 
 doEval expr = do
     st <- gets stEvalState
@@ -221,15 +240,17 @@ restoreTerminal =
 
 getCommand = do
     term <- gets stTerminal
+    contCmd <- gets stContinue
     liftIO $
         handle (\_ -> return Nothing) $
-        if term then prompt
+        if term then prompt (isJust contCmd)
         else getLine >>= return . Just
 
-prompt = do
-    LE.readline "gimli> " >>= preparse
+prompt continue =
+    LE.readline ("gimli" ++ if continue then "+ " else "> ") >>=
+    preparse continue
 
-preparse Nothing = return Nothing
-preparse cmd@(Just line)
-    | all isSpace line = prompt
+preparse continue Nothing = return Nothing
+preparse continue cmd@(Just line)
+    | all isSpace line = prompt continue
     | otherwise        = LE.addHistory line >> return cmd
