@@ -31,7 +31,7 @@ gimlOps =  words "$ * / + ! % - == != < > <= >= <- -> : = [ ]"
         ++ joinOps
         ++ words "| & || &&"
 
-joinOps =  "***" : U.combinations ["=*", "=", "=*"]
+joinOps =  "***" : U.combinations ["-=", "=", "-="]
 
 runLex :: Show a => Parser a -> String -> IO ()
 runLex p input =

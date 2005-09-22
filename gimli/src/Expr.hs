@@ -123,12 +123,12 @@ sParens e       = ("("++) . shows e . (")"++)
 sBrackets e     = ("["++) . shows e . ("]"++)
 sBraces e       = ("{"++) . shows e . ("}"++)
 
-jOp JCartesian = ss "***"
+jOp JCartesian = ss " *** "
 jOp (JNatural il l r ir) =
     ss " " . js l . ji il . ss "=" . ji ir . js r . ss " "
   where
-    ji JInner = ss "="
-    ji _      = ss "*"
+    ji JInner = ss "-"
+    ji _      = ss "="
     js []     = ss ""
     js x      = ss "{" . commajoin x . ss "}"
 

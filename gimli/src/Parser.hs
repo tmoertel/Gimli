@@ -133,10 +133,11 @@ opTable =
     , [ sfop  "$" (\t x -> x t) pspecExpr
       , sfop  "[" ESelect (expr `followedBy` reservedOp "]")
       ]
-    , [ jopr  "===" $ \l r -> EJoin (JNatural JInner l r JInner)
-      , jopr  "==*" $ \l r -> EJoin (JNatural JInner l r JOuter)
-      , jopr  "*==" $ \l r -> EJoin (JNatural JOuter l r JInner)
-      , jopr  "*=*" $ \l r -> EJoin (JNatural JOuter l r JOuter)
+    , [ jopr  "-=-" $ \l r -> EJoin (JNatural JInner l r JInner)
+      , jopr  "---" $ \l r -> EJoin (JNatural JInner l r JInner) -- shortcut
+      , jopr  "-==" $ \l r -> EJoin (JNatural JInner l r JOuter)
+      , jopr  "==-" $ \l r -> EJoin (JNatural JOuter l r JInner)
+      , jopr  "===" $ \l r -> EJoin (JNatural JOuter l r JOuter)
       , eopr  "***" $ EJoin JCartesian
       ]
     , [ infixlFn
