@@ -15,3 +15,12 @@ TODO  -*- Outline -*-
 * Eval
 
 X Get rid of VError: add ErrorT to Eval monad stack
+
+
+* Bugs
+
+- Associativity is wrong for Show instances when terms are of
+  same precdence:
+
+      gimli> :i 1 - (1 - 1)
+      1 - 1 - 1
