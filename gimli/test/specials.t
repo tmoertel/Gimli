@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 5;
+use Test::More tests => 11;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -16,6 +16,13 @@ use RunGimli;
 
 evals_ok( "if T then 1 else 2", 1 );
 evals_ok( "if F then 1 else 2", 2 );
+evals_ok( "if \"hi\" then 1 else 2", 1 );
+evals_ok( "if [] then 1 else 2", 2 );
+
+evals_ok( "if T then 1", 1 );
+evals_ok( "if F then 1", 'F' );
+evals_ok( "if \"hi\" then 1", 1 );
+evals_ok( "if [] then 1", "NULL" );
 
 # nesting
 

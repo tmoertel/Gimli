@@ -116,9 +116,9 @@ eval (ESeries es)
     | es == []  = return VNull
     | otherwise = foldr1 (>>) $ map evalL es
 
-eval (EIf etest etrue efalse) = do
-    t <- evalBool etest
-    eval (if t then etrue else efalse)
+eval (EIf etest etrue maybeEfalse) = do
+    t <- eval etest
+    if test t then eval etrue else maybe (return t) eval maybeEfalse
 
 eval (ESelect etarget eselect) = do
     target <- eval etarget

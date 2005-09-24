@@ -14,6 +14,7 @@ module Expr (
         toScalar,
         asVector, asNum, asTable, asString, asBool,
         mkVectorValue,
+        test,
 
     module CoreTypes,
     module Scalar,
@@ -40,7 +41,7 @@ data Expr
     = EApp Expr [Expr]
     | EBinOp !BinOp Expr Expr
     | EBind Expr Expr
-    | EIf Expr Expr Expr
+    | EIf Expr Expr (Maybe Expr)
     | EJoin JoinOp Expr Expr
     | EPrimitive Identifier
     | EProject Expr PSpec
@@ -55,12 +56,12 @@ data Expr
 
 instance Show Expr where
 
-    showsPrec p (EVal v)                   = showsPrec p v
-    showsPrec _ (EVector es)               = ss "[" . commajoin es . ss "]"
-    showsPrec _ (EVar s)                   = ss s
-    showsPrec _ (EIf e t f)                = ss "if " . shows e
-                                           . ss " then " . shows t
-                                           . ss " else " . shows f
+    showsPrec p (EVal v)            = showsPrec p v
+    showsPrec _ (EVector es)        = ss "[" . commajoin es . ss "]"
+    showsPrec _ (EVar s)            = ss s
+    showsPrec _ (EIf e t f)         = ss "if " . shows e
+                                    . ss " then " . shows t
+                                    . maybe id  (\x -> ss " else " . shows x) f
     showsPrec _ (ETable nvps)              = ss "table" . showParen True nvps'
       where
         nvps' = xjoin "," $ map (\(i,e) -> ss i . ss "=" . shows e) nvps
@@ -296,3 +297,15 @@ mkVectorValue xs =
     if vnull v then VNull else VVector v
   where
     v = mkVector xs
+
+
+-- true/false test
+
+test :: Value -> Bool
+test VNull       = False
+test (VVector v) = case vlist v of
+                       []           -> False
+                       SLog False:_ -> False
+                       SNa:_        -> False
+                       _            -> True
+test _           = True

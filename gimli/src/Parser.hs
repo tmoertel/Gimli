@@ -98,9 +98,10 @@ ifThenElseExpr = do
     test <- expr
     reserved "then"
     trueExpr <- expr
-    reserved "else"
-    falseExpr <- expr
-    return (EIf test trueExpr falseExpr)
+    maybeFalseExpr <- option Nothing $ do
+        reserved "else"
+        expr >>= return . Just
+    return (EIf test trueExpr maybeFalseExpr)
 
 scalarLiteralExpr =
         numberLiteralExpr
