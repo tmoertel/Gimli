@@ -94,14 +94,15 @@ bracketVectorExpr =
     <?> "vector constructor"
 
 ifThenElseExpr = do
-    reserved "if"
+    kind <-  (reserved "if" >> return EIf)
+         <|> (reserved "unless" >> return EUnless)
     test <- expr
     reserved "then"
     trueExpr <- expr
     maybeFalseExpr <- option Nothing $ do
         reserved "else"
         expr >>= return . Just
-    return (EIf test trueExpr maybeFalseExpr)
+    return (kind test trueExpr maybeFalseExpr)
 
 scalarLiteralExpr =
         numberLiteralExpr

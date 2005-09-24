@@ -42,6 +42,7 @@ data Expr
     | EBinOp !BinOp Expr Expr
     | EBind Expr Expr
     | EIf Expr Expr (Maybe Expr)
+    | EUnless Expr Expr (Maybe Expr)
     | EJoin JoinOp Expr Expr
     | EPrimitive Identifier
     | EProject Expr PSpec
@@ -60,6 +61,9 @@ instance Show Expr where
     showsPrec _ (EVector es)        = ss "[" . commajoin es . ss "]"
     showsPrec _ (EVar s)            = ss s
     showsPrec _ (EIf e t f)         = ss "if " . shows e
+                                    . ss " then " . shows t
+                                    . maybe id  (\x -> ss " else " . shows x) f
+    showsPrec _ (EUnless e t f)     = ss "unless " . shows e
                                     . ss " then " . shows t
                                     . maybe id  (\x -> ss " else " . shows x) f
     showsPrec _ (ETable nvps)              = ss "table" . showParen True nvps'

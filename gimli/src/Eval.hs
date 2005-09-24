@@ -117,8 +117,10 @@ eval (ESeries es)
     | otherwise = foldr1 (>>) $ map evalL es
 
 eval (EIf etest etrue maybeEfalse) = do
-    t <- eval etest
-    if test t then eval etrue else maybe (return t) eval maybeEfalse
+    doIfBody etest etrue maybeEfalse id
+
+eval (EUnless etest etrue maybeEfalse) = do
+    doIfBody etest etrue maybeEfalse not
 
 eval (ESelect etarget eselect) = do
     target <- eval etarget
@@ -169,6 +171,17 @@ argxof fname argstr m =
   where
     describe err =
         throwError ("argument" ++ argstr  ++ " of " ++ fname ++ ": " ++ err)
+
+
+-- if/unless helpers
+
+doIfBody etest etrue maybeEfalse trueTest = do
+    testResult <- eval etest
+    if trueTest (test testResult)
+        then eval etrue
+        else maybe (return testResult) eval maybeEfalse
+
+
 
 
 -- ============================================================================
