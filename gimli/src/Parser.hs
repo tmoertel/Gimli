@@ -167,13 +167,18 @@ opTable =
     , [ eopr  "<-" EBind
       , eopl  "->" (flip EBind)
       ]
+    , [ eoplx "if"     (\l r -> EIf r l Nothing)
+      , eoplx "unless" (\l r -> EUnless r l Nothing)
+      ]
     ]
   where
     vopl s ctor   = op s (bexp ctor) AssocLeft
     voplx s ctor  = opx s (bexp ctor) AssocLeft
     vopr s ctor   = op s (bexp ctor) AssocRight
     eopl s ctor   = op s ctor AssocLeft
+    eoplx s ctor  = opx s ctor AssocLeft
     eopr s ctor   = op s ctor AssocRight
+    eoprx s ctor  = opx s ctor AssocRight
     bexp ctor l r = EBinOp ctor l r
     pfop s ctor   = Prefix (reservedOp s >> return (EUOp ctor))
     sfop s ctor p = Postfix $ do
