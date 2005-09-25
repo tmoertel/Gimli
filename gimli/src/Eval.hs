@@ -23,6 +23,7 @@ import Expr
 import LoadData
 import PPrint
 import Utils
+import Glob
 
 type Closure    = (Value, Maybe Expr)
 
@@ -521,6 +522,7 @@ doPrim (prim@Prim { primName=name }) args =
     "write.csv" -> prim2 primWriteCsv
     "write.tsv" -> prim2 primWriteTsv
     "write.wsv" -> prim2 primWriteWsv
+    "glob"      -> primGlob name args
   where
     prim1 f = case args of
         [x] -> f name x
@@ -569,3 +571,14 @@ primWriteX printer nm etable efile = do
         case result of
             Left err -> throwError (show err)
             Right x  -> return (mkVectorValue [SStr file])
+
+primGlob _ [] = return VNull
+primGlob nm vs = do
+    ss <- argof nm $ do
+        mergedVec <- mapM eval vs >>= concatVals >>= asVector
+        (`mapM` vlist mergedVec) $ \val -> case val of
+            SStr s -> return s
+            _      -> throwError "not a string"
+    liftIO (mapM glob ss >>= return . mkVectorValue . map SStr . concat)
+
+

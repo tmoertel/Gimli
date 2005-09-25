@@ -12,8 +12,9 @@ module Expr (
     Value(..),
         vIsVector, vIsTable,
         toScalar,
-        asVector, asNum, asTable, asString, asBool,
+        asVector, asVectorNull, asNum, asTable, asString, asBool,
         mkVectorValue,
+        concatVals,
         test,
 
     module CoreTypes,
@@ -23,6 +24,7 @@ module Expr (
 )
 where
 
+import Control.Monad
 import Data.List (intersperse)
 
 import CoreTypes
@@ -274,6 +276,10 @@ asVector :: Monad m => Value -> m Vector
 asVector (VVector v) = return v
 asVector _           = fail "not a vector"
 
+asVectorNull :: Monad m => Value -> m Vector
+asVectorNull VNull   = return nullVector
+asVectorNull x       = asVector x
+
 asNum :: Monad m => Value -> m Double
 asNum v = asVector v >>= vecNum
 
@@ -286,6 +292,14 @@ asString v = asVector v >>= vecStr
 
 asBool :: Monad m => Value -> m Bool
 asBool v = asVector v >>= vecLog
+
+
+-- concatenation
+
+concatVals :: Monad m => [Value] -> m Value
+concatVals vs = do
+    vecs <- mapM asVectorNull vs
+    return . mkVectorValue . concat $ map vlist vecs
 
 
 -- vector values
@@ -302,6 +316,7 @@ mkVectorValue xs =
   where
     v = mkVector xs
 
+nullVector = V VTLog 0 []
 
 -- true/false test
 

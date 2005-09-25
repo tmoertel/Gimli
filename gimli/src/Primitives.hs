@@ -10,7 +10,7 @@ isPrimitive :: String -> Bool
 isPrimitive s = Set.member s primitivesSet
 
 primitives :: [String]
-primitives = pfile ++ words "in" ++ ises
+primitives = pfile ++ words "in" ++ ises ++ sys
   where
     pfile = map concat $
             U.combinations [ words "read write"
@@ -18,5 +18,6 @@ primitives = pfile ++ words "in" ++ ises
                            , words "csv tsv wsv"
                            ]
     ises = map ("is." ++) $ words "na"
+    sys  = words "glob"
 
 primitivesSet = Set.fromList primitives
