@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -24,6 +24,7 @@ evals_ok( "is.na(table(x=1))"  , 'F' );
 # glob
 
 evals_ok( 'glob("*/primitives.t")', '"./test/primitives.t"' );
+evals_ok( 'glob("*/p?im?ti?e?.t")', '"./test/primitives.t"' );
 evals_ok( 'glob("*/NO_SUCH_FILE")', 'NULL' );
 evals_ok( 'glob("*/primitives.t","*/NO_SUCH_FILE")', '"./test/primitives.t"' );
 evals_ok( 'glob(1)', qr/error.* not a string/ );
