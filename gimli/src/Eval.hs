@@ -13,7 +13,7 @@ import Control.Monad.Error
 import Control.Monad.State
 import Data.Array
 import Data.Either
-import Data.List (group, intersperse, transpose, (\\))
+import Data.List (group, intersperse, mapAccumL, transpose, (\\))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe
@@ -545,7 +545,8 @@ doPrim (prim@Prim { primName=name }) args =
     "write.csv" -> prim2 primWriteCsv
     "write.tsv" -> prim2 primWriteTsv
     "write.wsv" -> prim2 primWriteWsv
-    "glob"      -> primGlob name args
+    "glob"      -> primFlatten primGlob
+    "uniq"      -> primFlatten primUniq
   where
     prim1 f = case args of
         [x] -> f name x
@@ -553,6 +554,8 @@ doPrim (prim@Prim { primName=name }) args =
     prim2 f = case args of
         [x,y] -> f name x y
         _     -> argErr 2
+    primFlatten f = (f name . vlist) =<<
+               argof name (mapM eval args >>= concatVals >>= asVectorNull)
     argErr n = throwError $ name ++ " requires " ++ show n
                                  ++ " argument(s), not " ++ show (length args)
 
@@ -595,11 +598,14 @@ primWriteX printer nm etable efile = do
             Left err -> throwError (show err)
             Right x  -> return (mkVectorValue [SStr file])
 
-primGlob _ [] = return VNull
-primGlob nm vs = do
-    ss <- argof nm $ do
-        mergedVec <- mapM eval vs >>= concatVals >>= asVector
-        (`mapM` vlist mergedVec) $ \val -> case val of
+primGlob nm ss = do
+    pats <- argof nm $ do
+        (`mapM` ss) $ \val -> case val of
             SStr s -> return s
             _      -> throwError "not a string"
-    liftIO (mapM glob ss >>= return . mkVectorValue . map SStr . concat)
+    liftIO (mapM glob pats >>= return . mkVectorValue . map SStr . concat)
+
+primUniq nm xs = do
+    return . mkVectorValue . concat . snd $ mapAccumL f Set.empty xs
+  where
+    f set x = (Set.insert x set, if Set.member x set then [] else [x])

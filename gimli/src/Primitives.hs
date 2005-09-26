@@ -18,6 +18,6 @@ primitives = pfile ++ words "in" ++ ises ++ sys
                            , words "csv tsv wsv"
                            ]
     ises = map ("is." ++) $ words "na"
-    sys  = words "glob"
+    sys  = words "glob uniq"
 
 primitivesSet = Set.fromList primitives

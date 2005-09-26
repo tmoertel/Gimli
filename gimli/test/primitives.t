@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 11;
+use Test::More tests => 16;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -29,3 +29,12 @@ evals_ok( 'glob("*/NO_SUCH_FILE")', 'NULL' );
 evals_ok( 'glob("*/primitives.t","*/NO_SUCH_FILE")', '"./test/primitives.t"' );
 evals_ok( 'glob(1)', qr/error.* not a string/ );
 evals_ok( 'glob()', 'NULL' );
+
+
+# uniq
+
+evals_ok( 'uniq(NULL)'       , 'NULL' );
+evals_ok( 'uniq(1)'          , '1' );
+evals_ok( 'uniq(2,1,2,1)'    , '[2,1]' );
+evals_ok( 'uniq([2,1],3,2)'  , '[2,1,3]' );
+evals_ok( 'uniq("T",T)'      , '"T"' );
