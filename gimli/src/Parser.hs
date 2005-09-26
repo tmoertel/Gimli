@@ -137,7 +137,16 @@ nvpair = do
     name <- identifier
     reservedOp "="
     val  <- expr
-    return (name, val)
+    return $ NVP name val
+
+envpair = do
+    name <- expr
+    reservedOp "="
+    val  <- expr
+    return $ ENVP name val
+
+anypair = do
+    try nvpair <|> try envpair
 
 opTable =
     [ [ sfop "("  EApp (commaSep expr `followedBy` symbol ")")
@@ -240,7 +249,7 @@ pspecTable =
 
 pspecTableAdditiveOverlay = do
     symbol "+"
-    commaSep1 nvpair >>= return . flip EProject . PSTableOverlay
+    commaSep1 anypair >>= return . flip EProject . PSTableOverlay
 
 pspecTableStraight = do
     negated <- option False (symbol "-" >> return True)
@@ -258,7 +267,7 @@ pspecElem =
     <|> (expr >>= return . PSCExpr)
 
 pspecNameEqualsExpr =
-    liftM (uncurry PSCNExpr) nvpair
+    liftM PSCNExpr anypair
 
 
 -- helper parser combinators

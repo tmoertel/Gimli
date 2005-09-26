@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 68;
+use Test::More tests => 70;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -114,6 +114,18 @@ evals_exact_ok( "$t; x\$(z=x+20,C2=y-10)", <<EOF);
 2 22  2
 3 23  3
 EOF
+
+
+# by expression name-value pair
+
+evals_exact_ok( "$t; q <- \"y\"; x\$((q)=x)", <<EOF);
+  y
+1 1
+2 2
+3 3
+EOF
+
+
 
 # inverted
 
@@ -277,6 +289,13 @@ evals_exact_ok( "$t; x\$(+y=x,x=y)", <<EOF);
 EOF
 
 evals_exact_ok( "$t; x\$(+x=x-1, q=x)", <<EOF);
+  x  y z q
+1 0 11 T 1
+2 1 12 F 2
+3 2 13 T 3
+EOF
+
+evals_exact_ok( "$t; x\$(+\"x\"=x-1, q=x)", <<EOF);
   x  y z q
 1 0 11 T 1
 2 1 12 F 2

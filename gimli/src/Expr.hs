@@ -4,7 +4,7 @@ module Expr (
 
     Expr(..),
     BinOp(..), UnaryOp(..),
-    PSpec(..), PSCol(..),
+    PSpec(..), PSCol(..), ENVPair(..),
     JoinOp(..), JoinInclusion(..),
     ArgList, Arg(..),
     Primitive(..),
@@ -52,7 +52,7 @@ data Expr
     | EProject Expr PSpec
     | ESelect Expr Expr
     | ESeries [Expr]
-    | ETable [(Identifier, Expr)]
+    | ETable [ENVPair]
     | EUOp !UnaryOp Expr
     | EVal Value
     | EVar Identifier
@@ -78,7 +78,7 @@ instance Show Expr where
 
     showsPrec _ (ETable nvps)              = ss "table" . showParen True nvps'
       where
-        nvps' = xjoin "," $ map (\(i,e) -> ss i . ss "=" . shows e) nvps
+        nvps' = commajoin nvps
 
     showsPrec p (EApp e args)              = let q = 13 in
                                              showParen (p > q) $
@@ -176,7 +176,7 @@ instance PPrint Expr
 
 data PSpec
     = PSTable Bool [PSCol]    -- ^ build a new table by spec
-    | PSTableOverlay [(Identifier, Expr)]  -- ^ additively overlay columns
+    | PSTableOverlay [ENVPair]  -- ^ additively overlay columns
     | PSVectorName Identifier -- ^ extract vector by column name
     | PSVectorNum Int         -- ^ extract vector by column number
     deriving (Eq, Ord)
@@ -189,12 +189,12 @@ instance Show PSpec where
         b' = if b then ss "-" else id
     showsPrec _ (PSTableOverlay nvps)
                                   = showParen True $ ss "+"
-                                  . (xjoin "," $ map showsNvp nvps)
+                                  . (xjoin "," $ map shows nvps)
 
 data PSCol
     = PSCNum Int                -- ^ column number
     | PSCName Identifier        -- ^ column name
-    | PSCNExpr Identifier Expr  -- ^ ident=expr
+    | PSCNExpr ENVPair          -- ^ ident=expr
     | PSCStar                   -- ^ "star" for all columns
     | PSCExpr Expr              -- ^ expression
     deriving (Eq, Ord)
@@ -202,11 +202,18 @@ data PSCol
 instance Show PSCol where
     showsPrec _ (PSCNum i)     = shows i
     showsPrec _ (PSCName s)    = ss s
-    showsPrec _ (PSCNExpr s e) = showsNvp (s,e)
+    showsPrec _ (PSCNExpr nvp) = shows nvp
     showsPrec _ (PSCStar)      = ss "*"
     showsPrec _ (PSCExpr e)    = showParen True $ shows e
 
-showsNvp (s,e) = ss s . ss "=" . shows e
+data ENVPair
+    = NVP String Expr
+    | ENVP Expr Expr
+    deriving (Eq, Ord)
+
+instance Show ENVPair where
+    showsPrec _ (NVP s e)   = ss s . ss "=" . shows e
+    showsPrec _ (ENVP es e) = sParens es . ss "=" . shows e
 
 -- ============================================================================
 -- join operators

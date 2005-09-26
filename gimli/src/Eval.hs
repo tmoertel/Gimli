@@ -166,7 +166,11 @@ eval (EProject etarget pspec) = do
     table <- arg1of "$" (evalTable etarget)
     project table pspec
 
-eval (ETable ecolspecs) = do
+eval (ETable envps) = do
+    ecolspecs <- toNvps envps
+    let names = map fst ecolspecs
+    let evecs = map snd ecolspecs
+
     vecs <- argof nm $ mapM evalVector evecs
     let vlens = map vlen vecs
     if length (group vlens) == 1
@@ -174,8 +178,6 @@ eval (ETable ecolspecs) = do
         else throwError $ "table columns must be vectors of equal length"
   where
     nm    = "table constructor"
-    names = map fst ecolspecs
-    evecs = map snd ecolspecs
 
 
 -- error-reporting helpers
@@ -344,31 +346,40 @@ sel1 val x =
 
 -- projection of table
 
+toNvp :: ENVPair -> Eval r (String, Expr)
+toNvp (ENVP ne e) = liftM (flip (,) e) (evalString ne)
+toNvp (NVP n e)   = return (n, e)
+
+toNvps = mapM toNvp
+
 project table (PSVectorNum n) =
     liftM (VVector . (tvecs table !)) $ tableColumnIndexCheck table n
 
 project table (PSVectorName s) =
     (project table . PSVectorNum) =<< tableColumnLookupIndex table s
 
-project table (PSTableOverlay nvps) =
-    project table (PSTable False pscols)
+project table (PSTableOverlay envps) = do
+    nvps <- toNvps envps
+    project table (PSTable False (pscols nvps))
   where
-    pscols      = map expForCol (colNames ++ newNvpCols)
-    colNames    = tcnames table
-    colNamesMap = Map.fromList [(n,EVar n) | n <- colNames]
-    overlayMap  = Map.fromList nvps
-    newNvpCols  = filter (not . flip Map.member colNamesMap) $ map fst nvps
-    expForCol c = PSCNExpr c . fromJust $
-                  Map.lookup c overlayMap `mplus` Map.lookup c colNamesMap
+    pscols nvps = map expForCol (colNames ++ newNvpCols)
+      where
+        colNames    = tcnames table
+        colNamesMap = Map.fromList [(n,EVar n) | n <- colNames]
+        overlayMap  = Map.fromList nvps
+        newNvpCols  = filter (not . flip Map.member colNamesMap) $ map fst nvps
+        expForCol c = PSCNExpr . NVP c . fromJust $
+                      Map.lookup c overlayMap `mplus` Map.lookup c colNamesMap
 
 project table (PSTable True pscols) = do
     colIndexes <- mapM getIndex =<< expandSpecials table (removeStars pscols)
     project table . PSTable False . map PSCNum $
         range (bounds $ tcols table) \\ colIndexes
   where
-    getIndex (PSCNum n)     = tableColumnIndexCheck table n
-    getIndex (PSCName s)    = tableColumnLookupIndex table s
-    getIndex (PSCNExpr s _) = tableColumnLookupIndex table s
+    getIndex (PSCNum n)      = tableColumnIndexCheck table n
+    getIndex (PSCName s)     = tableColumnLookupIndex table s
+    getIndex (PSCNExpr envp) = toNvp envp >>=
+                               tableColumnLookupIndex table . fst
 
 project table (PSTable False pscols) = savingEnv $ do
     pscols'  <- expandSpecials table pscols
@@ -378,13 +389,13 @@ project table (PSTable False pscols) = savingEnv $ do
     return $ VTable $ mkTable $
            zip colNames (map toVector $ transpose rows)
   where
-    getName                  = pscol id fst
-    getExp                   = pscol EVar snd
-    pscol f g (PSCNum n)     = tableColumnIndexCheck table n >>=
-                               return . f . (tcols table !)
-    pscol f g (PSCName s)    = tableColumnLookupIndex table s >>=
-                               pscol f g . PSCNum
-    pscol f g (PSCNExpr s e) = return $ g (s,e)
+    getName                   = pscol id fst
+    getExp                    = pscol EVar snd
+    pscol f g (PSCNum n)      = tableColumnIndexCheck table n >>=
+                                return . f . (tcols table !)
+    pscol f g (PSCName s)     = tableColumnLookupIndex table s >>=
+                                pscol f g . PSCNum
+    pscol f g (PSCNExpr envp) = liftM g (toNvp envp)
 
 expandSpecials table pscs =
     liftM concat (mapM evalPS (expandStars table pscs))
