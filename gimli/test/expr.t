@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 114;
+use Test::More tests => 124;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -149,6 +149,21 @@ evals_ok( "(NA)", "NA" );
 evals_ok( "NA + 1", "NA" );
 evals_ok( "NA == NA", "NA" );
 evals_ok( "NA != NA", "NA" );
+
+# string ops
+
+evals_ok( '"A" ++ ""', '"A"' );
+evals_ok( '"" ++ "A"', '"A"' );
+evals_ok( '"A" ++ "x"', '"Ax"' );
+evals_ok( '"x" ++ "A"', '"xA"' );
+
+evals_ok( '"A" ++ ""', '"A"' );
+evals_ok( '"" ++ "A"', '"A"' );
+evals_ok( '"A" ++ "x"', '"Ax"' );
+evals_ok( '"x" ++ "A"', '"xA"' );
+evals_ok( '"A" ++ ["","x"]', '["A","Ax"]' );
+evals_ok( '["","x"] ++ "A"', '["A","xA"]' );
+
 
 # bad expressions
 

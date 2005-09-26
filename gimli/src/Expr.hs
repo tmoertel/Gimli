@@ -80,25 +80,27 @@ instance Show Expr where
       where
         nvps' = xjoin "," $ map (\(i,e) -> ss i . ss "=" . shows e) nvps
 
-    showsPrec p (EApp e args)              = let q = 12 in
+    showsPrec p (EApp e args)              = let q = 13 in
                                              showParen (p > q) $
                                                (showsPrec q e) .
                                                showParen True (commajoin args)
 
-    showsPrec p (EUOp UOpNegate x)         = sPfx 11 p (ss "-") x
+    showsPrec p (EUOp UOpNegate x)         = sPfx 12 p (ss "-") x
 
-    showsPrec p (EBinOp BinOpEllipses l r) = sIfx 10 p (ss ":") l r
+    showsPrec p (EBinOp BinOpEllipses l r) = sIfx 11 p (ss ":") l r
 
-    showsPrec p (EProject t ps)            = sIfx  9 p (ss "$") t ps
-    showsPrec p (ESelect t e)              = sSfx  9 p (sBrackets e) t
+    showsPrec p (EProject t ps)            = sIfx 10 p (ss "$") t ps
+    showsPrec p (ESelect t e)              = sSfx 10 p (sBrackets e) t
 
-    showsPrec p (EJoin op l r)             = sIfx  8 p (jOp op) l r
+    showsPrec p (EJoin op l r)             = sIfx  9 p (jOp op) l r
 
-    showsPrec p (EBinOp BinOpTimes    l r) = sIfx  7 p (ss " * ") l r
-    showsPrec p (EBinOp BinOpDiv      l r) = sIfx  7 p (ss " / ") l r
+    showsPrec p (EBinOp BinOpTimes    l r) = sIfx  8 p (ss " * ") l r
+    showsPrec p (EBinOp BinOpDiv      l r) = sIfx  8 p (ss " / ") l r
 
-    showsPrec p (EBinOp BinOpAdd      l r) = sIfx  6 p (ss " + ") l r
-    showsPrec p (EBinOp BinOpSub      l r) = sIfx  6 p (ss " - ") l r
+    showsPrec p (EBinOp BinOpAdd      l r) = sIfx  7 p (ss " + ") l r
+    showsPrec p (EBinOp BinOpSub      l r) = sIfx  7 p (ss " - ") l r
+
+    showsPrec p (EBinOp BinOpConcat   l r) = sIfx  6 p (ss " ++ ") l r
 
     showsPrec p (EBinOp BinOpEq       l r) = sIfx  4 p (ss " == ") l r
     showsPrec p (EBinOp BinOpGe       l r) = sIfx  4 p (ss " >= ") l r
@@ -159,6 +161,7 @@ data BinOp
     | BinOpEllipses
     | BinOpGt | BinOpGe | BinOpLt | BinOpLe
     | BinOpSOr | BinOpSAnd | BinOpVOr | BinOpVAnd
+    | BinOpConcat
     deriving  (Show, Read, Eq, Ord)
 
 data UnaryOp

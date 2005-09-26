@@ -166,6 +166,8 @@ opTable =
     , [ vopl  "+" BinOpAdd
       , vopl  "-" BinOpSub
       ]
+    , [ vopr  "++" BinOpConcat
+      ]
     , [ vopl  "==" BinOpEq
       , vopl  "!=" BinOpNeq
       , vopl  "<"  BinOpLt

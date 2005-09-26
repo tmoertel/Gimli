@@ -460,6 +460,8 @@ binOp BinOpDiv      = numOp (/)
 binOp BinOpAdd      = numOp (+)
 binOp BinOpSub      = numOp (-)
 
+binOp BinOpConcat   = strOp (++)
+
 binOp BinOpEq       = cmpOp (==)
 binOp BinOpNeq      = cmpOp (/=)
 binOp BinOpLt       = cmpOp (<)
@@ -475,6 +477,7 @@ binOp BinOpSAnd     = scalarize logOp (&&)
 
 numOp op x y = vectorize (propNa (binWrap SNum valNum op)) x y
 logOp op x y = vectorize (propNa (binWrap SLog valBool op)) x y
+strOp op x y = vectorize (propNa (binWrap SStr valStr op)) x y
 cmpOp op x y = vectorize (propNa f) x y
   where
     f x y = return $ SLog (withBestType op x y)
@@ -493,6 +496,11 @@ valNum x =
     case toSNum x of
         SNum v -> return v
         _      -> throwError $ "cannot coerce into numeric: (" ++ show x ++ ")"
+
+valStr x =
+    case toSStr x of
+        SStr s -> return s
+        _      -> throwError $ "cannot coerce into string: (" ++ show x ++ ")"
 
 valBool x =
     case toSLog x of
