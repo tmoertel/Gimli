@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 28;
+use Test::More tests => 34;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -70,3 +70,18 @@ evals_ok( "unless T then 1\$1 else 2", 2 );
 evals_ok("1 unless T", 'T' );
 evals_ok("1 unless F", '1' );
 evals_ok("1 unless 3 unless 2", '2' );  # rightmost is outermost
+
+
+#==============================================================================
+# for elem in collection ...
+#==============================================================================
+
+evals_ok( 'for x in NULL do T end', 'NULL' );
+evals_ok( 'for x in 1:3 do x + 1 end',  '4' );
+evals_ok( 'y <- NULL; for x in 1:3 do y <- [x,y] end', '[3,2,1]' );
+
+# suffix form
+
+evals_ok( 'T for x in NULL', 'NULL' );
+evals_ok( 'x+1 for x in 1:3',  '4' );
+evals_ok( 'y <- NULL; y <- [x,y] for x in 1:3', '[3,2,1]' );

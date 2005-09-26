@@ -55,23 +55,32 @@ type Eval r a    = EvalM EvalError EnvMap EvalState LogS r a
 
 stEnv = id
 
-bind ident valExpr = do
+bindExpr :: Identifier -> Expr -> Eval r Value
+bindExpr ident valExpr = do
     val <- eval valExpr
+    bindValExpr ident val (Just valExpr)
+
+bindVal :: Identifier -> Value -> Eval r Value
+bindVal ident val =
+    bindValExpr ident val Nothing
+
+bindValExpr :: Identifier -> Value -> Maybe Expr -> Eval r Value
+bindValExpr ident val valExpr = do
     env <- gets stEnv
-    modify $ modifyEnv $ Map.insert ident (val, Just valExpr)
+    modify $ modifyEnv $ Map.insert ident (val, valExpr)
     return val
 
 run :: EvalState -> Expr -> IO (Either EvalError Value, EvalState, LogS)
 run st =
     runEval Map.empty st . evalL
 
-evalL x = eval x >>= bind "LAST" . EVal
+evalL x = bindExpr "LAST" x
 
-evalString e = eval e >>= asString
-evalTable e  = eval e >>= asTable
-evalBool e   = eval e >>= asBool
-evalVector e = eval e >>= asVector
-
+evalString e     = eval e >>= asString
+evalTable e      = eval e >>= asTable
+evalBool e       = eval e >>= asBool
+evalVector e     = eval e >>= asVector
+evalVectorNull e = eval e >>= asVectorNull
 
 -- ===========================================================================
 {- | Evaluate an expression to result in a Value -}
@@ -93,11 +102,11 @@ eval (EApp fnExp argExps) = do
         x               -> throwError "cannot apply non-function"
 
 eval (EVector es) = do
-    vecs <- argof "vector constructor" $ mapM evalVector es
+    vecs <- argof "vector constructor" $ mapM evalVectorNull es
     return . VVector . mkVector $ concatMap vlist vecs
 
 eval (EBind lvalue ev)
-    | EVar ident <- lvalue = bind ident ev
+    | EVar ident <- lvalue = bindExpr ident ev
     | otherwise            = throwError $
                              "cannot bind to non-lvalue: " ++ pp lvalue
 
@@ -117,11 +126,25 @@ eval (ESeries es)
     | es == []  = return VNull
     | otherwise = foldr1 (>>) $ map evalL es
 
+eval (EBlock es) =
+    foldM (\_ e -> eval e) VNull es
+
+
 eval (EIf etest etrue maybeEfalse) = do
     doIfBody etest etrue maybeEfalse id
 
 eval (EUnless etest etrue maybeEfalse) = do
     doIfBody etest etrue maybeEfalse not
+
+eval (EFor var ecoll eblk) = do
+    coll <- arg1of nm (evalVectorNull ecoll)
+    during nm $ foldM bindAndEval VNull [mkVectorValue [x] | x <- vlist coll]
+  where
+    nm = "for " ++ var ++ " in ..."
+    bindAndEval :: Value -> Value -> Eval r Value
+    bindAndEval _ val = do
+        bindVal var val
+        eval eblk
 
 eval (ESelect etarget eselect) = do
     target <- eval etarget
@@ -398,7 +421,7 @@ evalRows table colExps = do
     bindCols = zipWithM bindScalar (tcnames table)
 
 bindScalar ident x =
-    bind ident (EVal $ mkVectorValue [x])
+    bindVal ident (mkVectorValue [x])
 
 removeStars =
     filter (not . isStar)
@@ -580,5 +603,3 @@ primGlob nm vs = do
             SStr s -> return s
             _      -> throwError "not a string"
     liftIO (mapM glob ss >>= return . mkVectorValue . map SStr . concat)
-
-

@@ -58,6 +58,7 @@ factor =
     <|> varExpr
     <|> tableExpr
     <|> ifThenElseExpr
+    <|> forExpr
     <?> "simple expression"
 
 tableExpr =
@@ -103,6 +104,21 @@ ifThenElseExpr = do
         reserved "else"
         expr >>= return . Just
     return (kind test trueExpr maybeFalseExpr)
+
+forExpr = do
+    var <- forVarInFrag
+    collection <- expr
+    prog <- blockExpr
+    return $ EFor var collection prog
+
+forVarInFrag = do
+    reserved "for"
+    var <- identifier
+    symbol "in"
+    return var
+
+blockExpr = do
+    between (reserved "do") (reserved "end") (liftM EBlock $ many expr)
 
 scalarLiteralExpr =
         numberLiteralExpr
@@ -169,6 +185,7 @@ opTable =
       ]
     , [ eoplx "if"     (\l r -> EIf r l Nothing)
       , eoplx "unless" (\l r -> EUnless r l Nothing)
+      , infixFor
       ]
     ]
   where
@@ -200,7 +217,9 @@ opTable =
                     r <- bexprs
                     return (ctor l r)
         bexprs    = option [] (braces (commaSep expr))
-
+    infixFor      = (`Infix` AssocLeft) $ do
+                        var <- forVarInFrag
+                        return $ flip (EFor var)
 -- projection specs
 
 pspecExpr =

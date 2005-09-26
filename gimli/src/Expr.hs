@@ -42,8 +42,10 @@ type Prog = [Expr] -- ^ A program is a series of expressions
 data Expr
     = EApp Expr [Expr]
     | EBinOp !BinOp Expr Expr
+    | EBlock [Expr]
     | EBind Expr Expr
     | EIf Expr Expr (Maybe Expr)
+    | EFor Identifier Expr Expr
     | EUnless Expr Expr (Maybe Expr)
     | EJoin JoinOp Expr Expr
     | EPrimitive Identifier
@@ -68,6 +70,12 @@ instance Show Expr where
     showsPrec _ (EUnless e t f)     = ss "unless " . shows e
                                     . ss " then " . shows t
                                     . maybe id  (\x -> ss " else " . shows x) f
+    showsPrec _ (EFor s e1 e2)      = ss "for " . ss s . ss " in "
+                                    . sParens e1 . ss " " . shows e2
+
+    showsPrec _ (EBlock es)         = ss "do " . showParen True (semijoin es)
+                                    . ss " end"
+
     showsPrec _ (ETable nvps)              = ss "table" . showParen True nvps'
       where
         nvps' = xjoin "," $ map (\(i,e) -> ss i . ss "=" . shows e) nvps
