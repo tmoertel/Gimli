@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 70;
+use Test::More tests => 72;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -23,6 +23,11 @@ evals_exact_ok( "table(x=1,y=2)", <<EOF );
 1 1 2
 EOF
 
+evals_exact_ok( 'table("1x"=1,y=2)', <<EOF );
+  1x y
+1  1 2
+EOF
+
 evals_exact_ok( "table(x=1:3,y=11:13)", <<EOF );
   x  y
 1 1 11
@@ -31,7 +36,7 @@ evals_exact_ok( "table(x=1:3,y=11:13)", <<EOF );
 EOF
 
 evals_ok( "table(x=1,y=11:13)", qr/error/ );
-
+evals_ok( "table(NULL=1)", qr/error/ );
 
 #==============================================================================
 # vector projection
