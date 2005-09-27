@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 34;
+use Test::More tests => 38;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -85,3 +85,12 @@ evals_ok( 'y <- NULL; for x in 1:3 do y <- [x,y] end', '[3,2,1]' );
 evals_ok( 'T for x in NULL', 'NULL' );
 evals_ok( 'x+1 for x in 1:3',  '4' );
 evals_ok( 'y <- NULL; y <- [x,y] for x in 1:3', '[3,2,1]' );
+
+#==============================================================================
+# blocks
+#==============================================================================
+
+evals_ok( '{ 1 }', 1 );
+evals_ok( '{ 1 2 }', 2 );
+evals_ok( 'do 1 end', 1 );
+evals_ok( 'do 1 2 end', 2 );

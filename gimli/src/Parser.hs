@@ -59,6 +59,7 @@ factor =
     <|> tableExpr
     <|> ifThenElseExpr
     <|> forExpr
+    <|> blockExpr
     <?> "simple expression"
 
 tableExpr =
@@ -121,7 +122,10 @@ forVarInFrag = do
     return var
 
 blockExpr = do
-    between (reserved "do") (reserved "end") (liftM EBlock $ many expr)
+        between (reserved "do") (reserved "end") blockContents
+    <|> between (symbol "{") (symbol "}") blockContents
+  where
+    blockContents = liftM EBlock (many expr)
 
 scalarLiteralExpr =
         numberLiteralExpr
