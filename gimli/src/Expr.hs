@@ -351,7 +351,7 @@ test :: Value -> Bool
 test VNull       = False
 test (VVector v) = case vlist v of
                        []           -> False
-                       SLog False:_ -> False
-                       SNa:_        -> False
+                       [SLog False] -> False
+                       [SNa]        -> False
                        _            -> True
 test _           = True
