@@ -4,7 +4,7 @@ module Expr (
 
     Expr(..),
     BinOp(..), UnaryOp(..),
-    PSpec(..), PSCol(..), ENVPair(..),
+    PSpec(..), PSCol(..), ENVPair(..), TableSpec(..),
     JoinOp(..), JoinInclusion(..),
     ArgList, Arg(..),
     Primitive(..),
@@ -52,7 +52,7 @@ data Expr
     | EProject Expr PSpec
     | ESelect Expr Expr
     | ESeries [Expr]
-    | ETable [ENVPair]
+    | ETable [TableSpec]
     | EUOp !UnaryOp Expr
     | EVal Value
     | EVar Identifier
@@ -76,9 +76,9 @@ instance Show Expr where
     showsPrec _ (EBlock es)         = ss "do " . showParen True (semijoin es)
                                     . ss " end"
 
-    showsPrec _ (ETable nvps)              = ss "table" . showParen True nvps'
+    showsPrec _ (ETable tspecs)     = ss "table" . showParen True tspecs'
       where
-        nvps' = commajoin nvps
+        tspecs' = commajoin tspecs
 
     showsPrec p (EApp e args)              = let q = 13 in
                                              showParen (p > q) $
@@ -119,6 +119,15 @@ instance Show Expr where
     showsPrec p (EBind v e)                = sIfx  1 p (ss " <- ") v e
 
     showsPrec p (ESeries es)               = semijoin es
+
+data TableSpec
+    = TCol ENVPair
+    | TSplice Expr
+    deriving (Eq, Ord)
+
+instance Show TableSpec where
+    showsPrec _ (TCol x)    = shows x
+    showsPrec _ (TSplice e) = sParens e
 
 sFn fname x     = ss fname . sParens x
 sFn2 fname x y  = ss fname . showParen True (commajoin [x,y])

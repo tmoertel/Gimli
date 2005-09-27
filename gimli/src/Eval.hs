@@ -166,11 +166,10 @@ eval (EProject etarget pspec) = do
     table <- arg1of "$" (evalTable etarget)
     project table pspec
 
-eval (ETable envps) = do
-    ecolspecs <- toNvps envps
+eval (ETable tspecs) = do
+    ecolspecs <- toNvps . concat =<< mapM splice tspecs
     let names = map fst ecolspecs
     let evecs = map snd ecolspecs
-
     vecs <- argof nm $ mapM evalVector evecs
     let vlens = map vlen vecs
     if length (group vlens) == 1
@@ -178,7 +177,11 @@ eval (ETable envps) = do
         else throwError $ "table columns must be vectors of equal length"
   where
     nm    = "table constructor"
-
+    splice (TCol envp)  = return [envp]
+    splice (TSplice et) = do
+        t <- evalTable et
+        return $ zipWith mkNVP (tcnames t) (elems (tvecs t))
+    mkNVP n vec = NVP n (EVal $ VVector vec)
 
 -- error-reporting helpers
 

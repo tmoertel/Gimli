@@ -62,7 +62,10 @@ factor =
     <?> "simple expression"
 
 tableExpr =
-    reserved "table" >> parens (commaSep1 anypair) >>= return . ETable
+    reserved "table" >> parens (commaSep1 tspec) >>= return . ETable
+
+tspec = do
+    (liftM TCol anypair) <|> (liftM TSplice expr)
 
 commaPair =
     sepPair comma
