@@ -337,20 +337,15 @@ sharedStrings xs ys =
 
 select table expr = savingEnv $ do
     selections <- evalRows table [expr] >>= return . map head
-    vecs' <- mapM (liftM catMaybes . zipWithM sel1 selections . vlist) vecs
+    let vecs' = map (catMaybes . zipWith sel1 selections . vlist) vecs
     return . VTable $
            table { tvecs = listArray (bounds tvts) $
                    zipWith mkVectorOfType origTypes vecs' }
   where
-    tvts      = tvecs table
-    vecs      = elems tvts
-    origTypes = map vtype vecs
-
-sel1 val x =
-    return $ case keepNAs toSLog $ toScalar val of
-        SLog True  -> Just x
-        _          -> Nothing
-
+    tvts       = tvecs table
+    vecs       = elems tvts
+    origTypes  = map vtype vecs
+    sel1 val x = if test val then Just x else Nothing
 
 -- projection of table
 

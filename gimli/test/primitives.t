@@ -39,7 +39,7 @@ evals_ok( 'length(1,1)'   , 2 );
 evals_ok( 'length(1:3,1)' , 4 );
 
 
-# match
+# regex match
 
 evals_ok( 'match("x", "y")'              , 'NULL' );
 evals_ok( 'match("x", "x")'              , '["","x",""]' );
