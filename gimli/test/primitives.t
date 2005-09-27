@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 19;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -38,3 +38,10 @@ evals_ok( 'uniq(1)'          , '1' );
 evals_ok( 'uniq(2,1,2,1)'    , '[2,1]' );
 evals_ok( 'uniq([2,1],3,2)'  , '[2,1,3]' );
 evals_ok( 'uniq("T",T)'      , '"T"' );
+
+
+# names
+
+evals_ok( 'names(table(x=1))', '"x"' );
+evals_ok( 'names(table(x=1,y=2))', '["x","y"]' );
+evals_ok( 'names(NULL)', qr/error:.* not a table/ );

@@ -564,14 +564,15 @@ doPrim :: Primitive -> [Expr] -> Eval r Value
 doPrim (prim@Prim { primName=name }) args =
     case name of
     "in"        -> prim2 primIn
+    "glob"      -> primFlatten primGlob
     "is.na"     -> prim1 primIsNa
+    "names"     -> prim1 primNames
     "read.csv"  -> prim1 primReadCsv
     "read.tsv"  -> prim1 primReadTsv
     "read.wsv"  -> prim1 primReadWsv
     "write.csv" -> prim2 primWriteCsv
     "write.tsv" -> prim2 primWriteTsv
     "write.wsv" -> prim2 primWriteWsv
-    "glob"      -> primFlatten primGlob
     "uniq"      -> primFlatten primUniq
   where
     prim1 f = case args of
@@ -597,6 +598,11 @@ primIsNa nm arg = do
         _         -> return $ VVector falseVector
   where
     naVecVal = VVector naVector
+
+primNames nm etable =
+    during "names" $ do
+    t <- evalTable etable
+    return . mkVectorValue . map SStr $ tcnames t
 
 primReadCsv = primReadX loadCsvTable
 primReadTsv = primReadX loadTsvTable
