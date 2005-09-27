@@ -94,7 +94,8 @@ eval (EVal v) =
 eval (EApp (EVal (VVector (V _ _ [SStr fname]))) args) =
     eval (EApp (EVar fname) args)
 
-eval (EApp fnExp argExps) = do
+eval (EApp fnExp argExps) =
+    during "function application" $ do
     fn <- eval fnExp
     case fn of
         VPrim prim      -> doPrim prim argExps
@@ -146,7 +147,8 @@ eval (EFor var ecoll eblk) = do
         bindVal var val
         eval eblk
 
-eval (ESelect etarget eselect) = do
+eval (ESelect etarget eselect) =
+    during "table selection" $ do
     target <- eval etarget
     case target of
         VVector vec  -> eval eselect >>= return . VVector . selectVector vec
@@ -164,10 +166,12 @@ eval (EJoin joinType eltarg ertarg) = do
 
 eval (EProject etarget pspec) = do
     table <- arg1of "$" (evalTable etarget)
-    project table pspec
+    during "project" $ project table pspec
 
-eval (ETable tspecs) = do
-    ecolspecs <- toNvps . concat =<< mapM splice tspecs
+eval (ETable tspecs) =
+    during nm $ do
+    ecolspecs <- during "argument evaluation" $ do
+        toNvps . concat =<< mapM splice tspecs
     let names = map fst ecolspecs
     let evecs = map snd ecolspecs
     vecs <- argof nm $ mapM evalVector evecs
@@ -176,7 +180,7 @@ eval (ETable tspecs) = do
         then return . VTable $ mkTable (zip names vecs)
         else throwError $ "table columns must be vectors of equal length"
   where
-    nm    = "table constructor"
+    nm    = "table(...) constructor"
     splice (TCol envp)  = return [envp]
     splice (TSplice et) = do
         t <- evalTable et
