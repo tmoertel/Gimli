@@ -563,25 +563,26 @@ vectorize' _ _ _ = throwError "vector operation requires two vectors"
 doPrim :: Primitive -> [Expr] -> Eval r Value
 doPrim (prim@Prim { primName=name }) args =
     case name of
-    "in"        -> prim2 primIn
-    "glob"      -> primFlatten primGlob
-    "is.na"     -> prim1 primIsNa
-    "names"     -> prim1 primNames
-    "read.csv"  -> prim1 primReadCsv
-    "read.tsv"  -> prim1 primReadTsv
-    "read.wsv"  -> prim1 primReadWsv
-    "write.csv" -> prim2 primWriteCsv
-    "write.tsv" -> prim2 primWriteTsv
-    "write.wsv" -> prim2 primWriteWsv
-    "uniq"      -> primFlatten primUniq
+    "in"        -> args2 primIn
+    "glob"      -> argsFlatten primGlob
+    "is.na"     -> args1 primIsNa
+    "length"    -> argsFlatten primLength
+    "names"     -> args1 primNames
+    "read.csv"  -> args1 primReadCsv
+    "read.tsv"  -> args1 primReadTsv
+    "read.wsv"  -> args1 primReadWsv
+    "write.csv" -> args2 primWriteCsv
+    "write.tsv" -> args2 primWriteTsv
+    "write.wsv" -> args2 primWriteWsv
+    "uniq"      -> argsFlatten primUniq
   where
-    prim1 f = case args of
+    args1 f = case args of
         [x] -> f name x
         _   -> argErr 1
-    prim2 f = case args of
+    args2 f = case args of
         [x,y] -> f name x y
         _     -> argErr 2
-    primFlatten f = (f name . vlist) =<<
+    argsFlatten f = (f name . vlist) =<<
                argof name (mapM eval args >>= concatVals >>= asVectorNull)
     argErr n = throwError $ name ++ " requires " ++ show n
                                  ++ " argument(s), not " ++ show (length args)
@@ -598,6 +599,9 @@ primIsNa nm arg = do
         _         -> return $ VVector falseVector
   where
     naVecVal = VVector naVector
+
+primLength _ xs = do
+    return $ mkVectorValue [SNum (fromIntegral $ length xs)]
 
 primNames nm etable =
     during "names" $ do
