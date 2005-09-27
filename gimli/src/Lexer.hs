@@ -17,7 +17,7 @@ gimlLexer =
       , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = words $
-                          " T TRUE F FALSE NA NULL c table" ++
+                          " T TRUE F FALSE NA NULL table" ++
                           " if then else unless for do end"
       , reservedOpNames = gimlOps
       , opStart         = oneOf . nub $ head gimlOps

@@ -95,7 +95,7 @@ vectorExpr = do
 
 bracketVectorExpr =
         (brackets (commaSep1 expr))
-    <|> (reserved "c" >> parens (commaSep1 expr))
+    <|> (symbol "c" >> parens (commaSep1 expr))
     <?> "vector constructor"
 
 ifThenElseExpr = do
