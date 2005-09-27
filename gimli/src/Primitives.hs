@@ -18,7 +18,7 @@ primitives = pfile ++ words "in" ++ ises ++ sys ++ table
                            , words "csv tsv wsv"
                            ]
     ises  = map ("is." ++) $ words "na"
-    sys   = words "glob uniq length"
+    sys   = words "glob uniq length match"
     table = words "names"
 
 primitivesSet = Set.fromList primitives

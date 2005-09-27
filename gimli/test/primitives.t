@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 23;
+use Test::More tests => 35;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -37,6 +37,22 @@ evals_ok( 'length(NULL)'  , 0 );
 evals_ok( 'length(1)'     , 1 );
 evals_ok( 'length(1,1)'   , 2 );
 evals_ok( 'length(1:3,1)' , 4 );
+
+
+# match
+
+evals_ok( 'match("x", "y")'              , 'NULL' );
+evals_ok( 'match("x", "x")'              , '["","x",""]' );
+evals_ok( 'match("axb", "x")'            , '["a","x","b"]' );
+evals_ok( 'match("x", "(x)")'            , '"x"' );
+evals_ok( 'match("X", "(x)")'            , 'NULL' );
+evals_ok( 'match("X", "(x)", "i")'       , '"X"' );
+evals_ok( 'match("Xa", "(x)(.)", "i")'   , '["X","a"]' );
+evals_ok( 'match("x\na", "(x.*a)")'      , 'NULL' );
+evals_ok( 'match("x\na", "(x.*a)", "s")' , '"x\na"' );
+evals_ok( 'match()'                      , qr/error:.* arguments/ );
+evals_ok( 'match("")'                    , qr/error:.* arguments/ );
+evals_ok( 'match("","","","")'           , qr/error:.* arguments/ );
 
 
 # names

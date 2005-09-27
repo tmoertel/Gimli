@@ -17,6 +17,7 @@ import Data.List (group, intersperse, mapAccumL, transpose, (\\))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe
+import Text.Regex
 
 import EvalMonad
 import Expr
@@ -567,6 +568,7 @@ doPrim (prim@Prim { primName=name }) args =
     "glob"      -> argsFlatten primGlob
     "is.na"     -> args1 primIsNa
     "length"    -> argsFlatten primLength
+    "match"     -> primMatch name args
     "names"     -> args1 primNames
     "read.csv"  -> args1 primReadCsv
     "read.tsv"  -> args1 primReadTsv
@@ -602,6 +604,24 @@ primIsNa nm arg = do
 
 primLength _ xs = do
     return $ mkVectorValue [SNum (fromIntegral $ length xs)]
+
+primMatch nm args =
+    during "match" $ do
+    ss <- during "arguments" $ mapM evalString args
+    case ss of
+        [s,re]       -> doRegexMatch s re (True, True)
+        [s,re,flags] -> doRegexMatch s re ( 's' `notElem` flags
+                                          , 'i' `notElem` flags)
+        _            -> throwError "2 or 3 arguments are required"
+  where
+    doRegexMatch s re (multiline, nocase) = return $
+        case matchRegexAll (mkRegexWithOpts re multiline nocase) s of
+            Nothing -> VNull
+            Just (before, match, after, []) -> svec [before, match, after]
+            Just (_     , _    , _    , xs) -> svec xs
+    svec xs = mkVectorValue (map SStr xs)
+
+
 
 primNames nm etable =
     during "names" $ do
