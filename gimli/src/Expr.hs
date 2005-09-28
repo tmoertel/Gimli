@@ -45,17 +45,17 @@ data Expr
     | EBlock [Expr]
     | EBind Expr Expr
     | EIf Expr Expr (Maybe Expr)
-    | EFor Identifier Expr Expr
+    | EFor !Identifier Expr Expr
     | EUnless Expr Expr (Maybe Expr)
-    | EJoin JoinOp Expr Expr
-    | EPrimitive Identifier
-    | EProject Expr PSpec
+    | EJoin !JoinOp Expr Expr
+    | EPrimitive !Identifier
+    | EProject Expr !PSpec
     | ESelect Expr Expr
     | ESeries [Expr]
     | ETable [TableSpec]
     | EUOp !UnaryOp Expr
-    | EVal Value
-    | EVar Identifier
+    | EVal !Value
+    | EVar !Identifier
     | EVector [Expr]
     deriving (Eq, Ord)
 
@@ -184,10 +184,10 @@ instance PPrint Expr
 -- ============================================================================
 
 data PSpec
-    = PSTable Bool [PSCol]    -- ^ build a new table by spec
-    | PSTableOverlay [ENVPair]  -- ^ additively overlay columns
-    | PSVectorName Identifier -- ^ extract vector by column name
-    | PSVectorNum Int         -- ^ extract vector by column number
+    = PSTable !Bool [PSCol]    -- ^ build a new table by spec
+    | PSTableOverlay [ENVPair] -- ^ additively overlay columns
+    | PSVectorName !Identifier -- ^ extract vector by column name
+    | PSVectorNum !Int         -- ^ extract vector by column number
     deriving (Eq, Ord)
 
 instance Show PSpec where
@@ -201,8 +201,8 @@ instance Show PSpec where
                                   . (xjoin "," $ map shows nvps)
 
 data PSCol
-    = PSCNum Int                -- ^ column number
-    | PSCName Identifier        -- ^ column name
+    = PSCNum !Int               -- ^ column number
+    | PSCName !Identifier       -- ^ column name
     | PSCNExpr ENVPair          -- ^ ident=expr
     | PSCStar                   -- ^ "star" for all columns
     | PSCExpr Expr              -- ^ expression
@@ -216,7 +216,7 @@ instance Show PSCol where
     showsPrec _ (PSCExpr e)    = showParen True $ shows e
 
 data ENVPair
-    = NVP String Expr
+    = NVP !String Expr
     | ENVP Expr Expr
     deriving (Eq, Ord)
 
@@ -230,7 +230,7 @@ instance Show ENVPair where
 
 data JoinOp
     = JCartesian
-    | JNatural JoinInclusion [Expr] [Expr] JoinInclusion
+    | JNatural !JoinInclusion [Expr] [Expr] !JoinInclusion
     deriving (Eq, Ord, Show)
 
 data JoinInclusion
@@ -249,12 +249,12 @@ data JoinInclusion
 
 type ArgList = [Arg]
 data Arg     = Arg
-    { argName :: String
+    { argName :: !String
     }
     deriving (Eq,Ord,Show,Read)
 
 data Primitive = Prim
-    { primName :: String
+    { primName :: !String
     , primArgs :: ArgList
     }
     deriving (Eq,Ord,Show,Read)
@@ -268,10 +268,10 @@ data Primitive = Prim
 
 
 data Value
-  = VVector Vector
-  | VTable Table
-  | VFunc ArgList Prog
-  | VPrim Primitive
+  = VVector !Vector
+  | VTable !Table
+  | VFunc !ArgList !Prog
+  | VPrim !Primitive
   | VNull
     deriving (Ord, Eq)
 
