@@ -26,7 +26,7 @@ import Glob
 -- top-level evaluation
 -- ============================================================================
 
-evaluate :: EvalState -> Expr -> IO (Either EvalError Value, EvalState, LogS)
+evaluate :: EvalCtx -> Expr -> IO (Either EvalError Value, EvalCtx, LogS)
 evaluate st expr = do
     (errOrVal, _, log) <- runEval st () (evalL expr)
     return (errOrVal, st, log)
@@ -67,6 +67,14 @@ eval (EBind lvalue ev)
     | EVar ident <- lvalue = evalAndBind ident ev
     | otherwise            = throwError $
                              "cannot bind to non-lvalue: " ++ pp lvalue
+
+eval (EBindOver lvalue ev)
+    | EVar ident <- lvalue = evalAndBindOver ident ev
+    | otherwise            = throwError $
+                             "cannot bind to non-lvalue: " ++ pp lvalue
+
+eval (ELocal e) = do
+    enterNewScope (eval e)
 
 eval (EVar ident) = do
     b <- lookupBinding ident
@@ -189,6 +197,10 @@ evalAndBind ident valExpr = do
     val <- eval valExpr
     bindValExpr ident val (Just valExpr)
 
+evalAndBindOver :: Identifier -> Expr -> Eval r Value
+evalAndBindOver ident valExpr = do
+    val <- eval valExpr
+    bindOverValExpr ident val (Just valExpr)
 
 -- ============================================================================
 -- vector operations

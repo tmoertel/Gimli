@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 45;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -94,3 +94,39 @@ evals_ok( '{ 1 }', 1 );
 evals_ok( '{ 1 2 }', 2 );
 evals_ok( 'do 1 end', 1 );
 evals_ok( 'do 1 2 end', 2 );
+
+
+#==============================================================================
+# local & <<-
+#==============================================================================
+
+evals_ok( 'x <- 1; local x <- 2; x' , 1 );
+evals_ok( 'local x <- 2'            , 2 );
+evals_ok( 'x <- 1; local x <<- 2; x', 2 );
+evals_ok( 'local x <<- 2'           , 2 );
+
+evals_ok( <<EOF                     , "0\n2" );
+x <- 0
+local do
+  x <- 1
+  local x <<- 2
+  x
+end
+EOF
+
+evals_ok( <<EOF                     , "0\n2\n0" );
+x <- 0
+local do
+  x <- 1
+  local x <<- 2
+end
+x
+EOF
+
+evals_ok( <<EOF                     , "0\n2\n2" );
+x <- 0
+local do
+  local x <<- 2
+end
+x
+EOF

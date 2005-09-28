@@ -10,15 +10,15 @@ isPrimitive :: String -> Bool
 isPrimitive s = Set.member s primitivesSet
 
 primitives :: [String]
-primitives = pfile ++ words "in" ++ ises ++ sys ++ table
+primitives = pfile ++ words "in" ++ ises ++ kernel ++ table
   where
     pfile = map concat $
             U.combinations [ words "read write"
                            , words "."
                            , words "csv tsv wsv"
                            ]
-    ises  = map ("is." ++) $ words "na"
-    sys   = words "glob uniq length match"
-    table = words "names"
+    ises   = map ("is." ++) $ words "na"
+    kernel = words "glob uniq length match"
+    table  = words "names"
 
 primitivesSet = Set.fromList primitives

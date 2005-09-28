@@ -18,7 +18,8 @@ gimlLexer =
       , commentLine     = "#"
       , reservedNames   = words $
                           " T TRUE F FALSE NA NULL table" ++
-                          " if then else unless for do end"
+                          " if then else unless for do end" ++
+                          " local"
       , reservedOpNames = gimlOps
       , opStart         = oneOf . nub $ head gimlOps
       , opLetter        = oneOf . nub $ concatMap tail gimlOps
@@ -27,7 +28,7 @@ gimlLexer =
       }
     )
 
-gimlOps =  words "$ * / + ! % - == != < > <= >= <- -> : = [ ]"
+gimlOps =  words "$ * / + ! % - == != < > <= >= <- -> <<- ->> : = [ ]"
         ++ joinOps
         ++ words "| & || &&"
         ++ words "++"

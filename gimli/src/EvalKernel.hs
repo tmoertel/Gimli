@@ -1,10 +1,10 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module EvalKernel (
-    EvalState, EvalError, LogS,
+    EvalCtx, EvalError, LogS,
     Eval, runEval,
     enterNewScope,
-    lookupBinding, bindVal, bindValExpr,
+    lookupBinding, bindVal, bindValExpr, bindOverValExpr,
     newTopLevel,
     clExp, clVal
 )
@@ -51,12 +51,16 @@ resetEval m = ErrorT $ reset (runErrorT m)
 -- ===========================================================================
 
 type EvalError   = String
-type EvalState   = FrameStack
 type LogS        = [String] -> [String]
-type Eval r a    = EvalM EvalError FrameStack () LogS r a
+type Eval r a    = EvalM EvalError EvalCtx () LogS r a
+
+data EvalCtx     = EvalCtx
+                   { ctxFrames   :: FrameStack
+                   , ctxTopLevel :: Frame
+                   }
+type Env         = Map.Map Identifier Closure
 
 type FrameStack  = [Frame]
-type Env         = Map.Map Identifier Closure
 data Frame       = Frame
     { frameEnvRef :: IORef Env
     }
@@ -73,14 +77,17 @@ newFrame = do
     env <- newIORef emptyEnv
     return $ Frame { frameEnvRef = env }
 
-newTopLevel :: IO FrameStack
+newTopLevel :: IO EvalCtx
 newTopLevel = do
     fr <- newFrame
-    return [fr]
+    return $ EvalCtx { ctxFrames = [fr], ctxTopLevel = fr }
+
+modifyCtxFrames f ctx =
+    ctx { ctxFrames = f (ctxFrames ctx) }
 
 getLocalFrame :: Eval r Frame
 getLocalFrame =
-    asks $ head
+    asks $ head . ctxFrames
 
 modifyFrameEnv :: (Env -> Env) -> Frame -> Eval r Env
 modifyFrameEnv f frame = liftIO $ do
@@ -97,7 +104,7 @@ modifyLocalEnv f =
 enterNewScope :: Eval r a -> Eval r a
 enterNewScope m = do
     fr <- liftIO newFrame
-    local (fr:) m
+    local (modifyCtxFrames (fr:)) m
 
 emptyEnv :: Env
 emptyEnv  = Map.empty
@@ -111,16 +118,37 @@ bindValExpr ident val valExpr = do
     modifyLocalEnv $ Map.insert ident (val, valExpr)
     return val
 
+bindOverValExpr :: Identifier -> Value -> Maybe Expr -> Eval r Value
+bindOverValExpr ident val valExpr = do
+    frame <- findBindingFrame ident
+    Map.insert ident (val, valExpr) `modifyFrameEnv` frame
+    return val
+
 lookupBinding :: Identifier -> Eval r (Maybe Closure)
 lookupBinding s = do
-    envRefStack <- asks (map frameEnvRef)
+    liftM (maybe Nothing (Just . snd)) (lookupBindingAndFrame s)
+
+lookupBindingAndFrame :: Identifier -> Eval r (Maybe (Frame, Closure))
+lookupBindingAndFrame s = do
+    frames <- asks ctxFrames
     callCC $ \esc -> do
-        mapM_ (search esc s) envRefStack
+        mapM_ (search esc s) frames
         return Nothing
   where
-    search esc s envRef = do
-       env <- liftIO $ readIORef envRef
+    search esc s frame = do
+       env <- liftIO $ readIORef (frameEnvRef frame)
        case Map.lookup s env of
-           Just cl -> esc (Just cl)
+           Just cl -> esc $ Just (frame, cl)
            _       -> return Nothing
+
+
+-- | Find the frame that contains the given binding or, if not found,
+--   the top-level frame.
+
+findBindingFrame :: Identifier -> Eval r Frame
+findBindingFrame s = do
+    baf <- lookupBindingAndFrame s
+    case baf of
+        Just (frame, _) -> return frame
+        _               -> asks ctxTopLevel
 

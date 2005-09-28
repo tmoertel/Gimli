@@ -73,7 +73,7 @@ welcome =
 data ReplState r a =
     ReplState { stExit      :: a -> ContT r (StateT (ReplState r a) IO) a
               , stTerminal  :: Bool
-              , stEvalState :: EV.EvalState
+              , stEvalState :: EV.EvalCtx
               , stContinue  :: Maybe String
               }
 

@@ -44,10 +44,12 @@ data Expr
     | EBinOp !BinOp Expr Expr
     | EBlock [Expr]
     | EBind Expr Expr
+    | EBindOver Expr Expr
     | EIf Expr Expr (Maybe Expr)
     | EFor !Identifier Expr Expr
     | EUnless Expr Expr (Maybe Expr)
     | EJoin !JoinOp Expr Expr
+    | ELocal Expr
     | EPrimitive !Identifier
     | EProject Expr !PSpec
     | ESelect Expr Expr
@@ -75,6 +77,8 @@ instance Show Expr where
 
     showsPrec _ (EBlock es)         = ss "do " . showParen True (semijoin es)
                                     . ss " end"
+
+    showsPrec _ (ELocal e)          = ss "local " . shows e
 
     showsPrec _ (ETable tspecs)     = ss "table" . showParen True tspecs'
       where
@@ -117,6 +121,7 @@ instance Show Expr where
     showsPrec p (EBinOp BinOpVOr      l r) = sIfx  2 p (ss " | ")  l r
 
     showsPrec p (EBind v e)                = sIfx  1 p (ss " <- ") v e
+    showsPrec p (EBindOver v e)            = sIfx  1 p (ss " <<- ") v e
 
     showsPrec p (ESeries es)               = semijoin es
 

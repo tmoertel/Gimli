@@ -60,10 +60,14 @@ factor =
     <|> ifThenElseExpr
     <|> forExpr
     <|> blockExpr
+    <|> localExpr
     <?> "simple expression"
 
 tableExpr =
     reserved "table" >> parens (commaSep1 tspec) >>= return . ETable
+
+localExpr =
+    reserved "local" >> liftM ELocal expr
 
 tspec = do
     (liftM TCol anypair) <|> (liftM TSplice expr)
@@ -200,6 +204,8 @@ opTable =
       ]
     , [ eopr  "<-" EBind
       , eopl  "->" (flip EBind)
+      , eopr  "<<-" EBindOver
+      , eopl  "->>" (flip EBindOver)
       ]
     , [ eoplx "if"     (\l r -> EIf r l Nothing)
       , eoplx "unless" (\l r -> EUnless r l Nothing)
