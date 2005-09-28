@@ -125,9 +125,8 @@ join_exact_ok( "t{x} -=- {z}v", <<EOF );
 2 2 F
 EOF
 
-join_exact_ok( "t{no.such.column} -=- {z}v", <<EOF );
-(empty table)
-EOF
+evals_ok( "table(x=1){no.such.column} -=- table(x=1)",
+          qr/error:.*variable.*not found/ );
 
 
 #==============================================================================

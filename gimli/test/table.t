@@ -70,7 +70,8 @@ evals_ok( "$t; x\$foo", qr/column name .* does not exist/ );
 #==============================================================================
 
 evals_ok( "$t; y <- 4; x\$(y=3); y", 4 );
-evals_ok( "$t; y <- 4; x\$(y=3,z=nosuchcolumn); y", 4 );
+evals_ok( "$t; y <- 4; x\$(y=3,z=nosuchcolumn); y",
+          qr/error:.*variable.*not found/ );
 
 # check for non-existent column names
 

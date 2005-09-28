@@ -21,6 +21,7 @@ import Expr (asNum)
 import qualified Eval as Eval
 import PPrint
 import Utils
+import qualified EvalMonad as EM
 
 -- Config
 
@@ -36,8 +37,9 @@ main = do
     when term $ putStrLn "Exiting."
 
 
-initialState term =
-    (`execStateT` s0) . (`runContT` return) $ do
+initialState term = do
+    topLevel <- Eval.newTopLevel
+    (`execStateT` s0 {stEvalState = topLevel}) . (`runContT` return) $ do
         userconf <- liftIO $ handle (\_ -> return []) $ do
             home <- getEnv "HOME"
             liftM lines $ readFile (home ++ "/" ++ dotGimli)
@@ -48,7 +50,7 @@ initialState term =
         else         [ "SYS.ROWS <- 1e9; SYS.COLS <- 1e9" ]
     s0 = ReplState { stExit      = undefined
                    , stTerminal  = term
-                   , stEvalState = Eval.emptyEnv
+                   , stEvalState = undefined
                    , stContinue  = Nothing
                    }
 
@@ -152,8 +154,13 @@ getFormatter = do
   where
     asNumWithDefault d v = return . maybe d round $ v >>= asNum
 
-getBinding varname =
-    gets (Eval.envMap . stEvalState) >>= return . Map.lookup varname
+getBinding varname = do
+    evalState <- gets stEvalState
+    (result, _, _) <- liftIO $
+        EM.runEval evalState () (Eval.lookupBinding varname)
+    return $ case result of
+        Right x -> x
+        _       -> Nothing
 
 getBindingValue varname = do
     v <- getBinding varname
@@ -179,8 +186,6 @@ sysCommands =
     , (":?",       sysHelp)
     , (":explain", sysExplain)
     , (":inspect", sysInspect)
-    , (":freeze",  sysFreeze)
---  , (":thaw",    sysThaw)
     ]
 
 sysQuit _ = do
@@ -192,8 +197,8 @@ sysHelp _ =
     "Commands I know:" : map (("  " ++) . fst) sysCommands
 
 sysExplain cmd = do
-    est <- gets (Eval.envMap . stEvalState)
-    return . (++"\n") . maybe nsvar pp $ Map.lookup varname est >>= Eval.clExp
+    binding <- getBinding varname
+    return . (++"\n") $ maybe nsvar (maybe nsvar pp . Eval.clExp) binding
   where
     varname = concat . tail $ words cmd
     nsvar   = "the variable \"" ++ varname
@@ -201,25 +206,6 @@ sysExplain cmd = do
 
 sysInspect =
     return . (++"\n") . either show pp . parse . skipToArgs
-
-sysFreeze cmd = do
-    stRep <- gets stEvalState >>= return . show
-    liftIO . handleStd $ do
-        writeFile (head . words . skipToArgs $ cmd) (stRep ++ "\n")
-        return $ "wrote state " ++ bytes stRep ++ "\n"
-{-
-
-sysThaw cmd = do
-    result <- liftIO . try $ do
-        stRep <- readFile (head . words . skipToArgs $ cmd)
-        st    <- evaluate (read stRep)
-        return (stRep, st)
-    case result of
-        Left e -> liftIO . handleStd $ throw e
-        Right (stRep, st) -> do
-            putEvalState st
-            return $"read state " ++ bytes stRep ++ "\n"
--}
 
 bytes s = "(" ++ show (length s) ++ " bytes)"
 

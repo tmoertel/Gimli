@@ -1,18 +1,19 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Eval (
-    eval, run, emptyEnv,
+    eval, run, newTopLevel,
     clExp, clVal,
-    envMap,
+    lookupBinding,
     EvalState
 ) where
 
 import Control.Exception
 import Control.Monad.Cont
 import Control.Monad.Error
-import Control.Monad.State
+import Control.Monad.RWS
 import Data.Array
 import Data.Either
+import Data.IORef
 import Data.List (group, intersperse, mapAccumL, transpose, (\\))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -26,35 +27,61 @@ import PPrint
 import Utils
 import Glob
 
-type Closure    = (Value, Maybe Expr)
-
-clEnv _     = error "no environment in closure"
-clVal (v,_) = v
-clExp (v,x) = x
-
-nullClosure = (VNull, Nothing)
-
-type EnvMap     = Map.Map Identifier Closure
-data Env        = Env EnvMap deriving (Show, Eq, Ord)
-
-emptyEnv :: Env
-emptyEnv  = Env Map.empty
-
-modifyEnv :: (EnvMap -> EnvMap) -> Env -> Env
-modifyEnv f (Env emap) = Env (f emap)
-
-envMap (Env emap) = emap
-
 -- ===========================================================================
 -- Eval monad
 -- ===========================================================================
 
 type EvalError   = String
-type EvalState   = Env
+type EvalState   = FrameStack
 type LogS        = [String] -> [String]
-type Eval r a    = EvalM EvalError EnvMap EvalState LogS r a
+type Eval r a    = EvalM EvalError FrameStack () LogS r a
 
-stEnv = id
+type FrameStack  = [Frame]
+type Env         = Map.Map Identifier Closure
+data Frame       = Frame
+    { frameEnvRef :: IORef Env
+    }
+
+type Closure = (Value, Maybe Expr)
+
+clVal = fst
+clExp = snd
+
+nullClosure = (VNull, Nothing)
+
+newFrame :: IO Frame
+newFrame = do
+    env <- newIORef emptyEnv
+    return $ Frame { frameEnvRef = env }
+
+newTopLevel :: IO FrameStack
+newTopLevel = do
+    fr <- newFrame
+    return [fr]
+
+getLocalFrame :: Eval r Frame
+getLocalFrame =
+    asks $ head
+
+modifyFrameEnv :: (Env -> Env) -> Frame -> Eval r Env
+modifyFrameEnv f frame = liftIO $ do
+    let envRef = frameEnvRef frame
+    env <- readIORef envRef
+    let env' = f env
+    writeIORef envRef env'
+    return env'
+
+modifyLocalEnv :: (Env -> Env) -> Eval r Env
+modifyLocalEnv f =
+    modifyFrameEnv f =<< getLocalFrame
+
+enterNewScope :: Eval r a -> Eval r a
+enterNewScope m = do
+    fr <- liftIO newFrame
+    local (fr:) m
+
+emptyEnv :: Env
+emptyEnv  = Map.empty
 
 bindExpr :: Identifier -> Expr -> Eval r Value
 bindExpr ident valExpr = do
@@ -67,13 +94,27 @@ bindVal ident val =
 
 bindValExpr :: Identifier -> Value -> Maybe Expr -> Eval r Value
 bindValExpr ident val valExpr = do
-    env <- gets stEnv
-    modify $ modifyEnv $ Map.insert ident (val, valExpr)
+    modifyLocalEnv $ Map.insert ident (val, valExpr)
     return val
 
+lookupBinding :: Identifier -> Eval r (Maybe Closure)
+lookupBinding s = do
+    envRefStack <- asks (map frameEnvRef)
+    callCC $ \esc -> do
+        mapM_ (search esc s) envRefStack
+        return Nothing
+  where
+    search esc s envRef = do
+       env <- liftIO $ readIORef envRef
+       case Map.lookup s env of
+           Just cl -> esc (Just cl)
+           _       -> return Nothing
+
+
 run :: EvalState -> Expr -> IO (Either EvalError Value, EvalState, LogS)
-run st =
-    runEval Map.empty st . evalL
+run st expr = do
+    (errOrVal, _, log) <- runEval st () (evalL expr)
+    return (errOrVal, st, log)
 
 evalL x = bindExpr "LAST" x
 
@@ -112,9 +153,12 @@ eval (EBind lvalue ev)
     | otherwise            = throwError $
                              "cannot bind to non-lvalue: " ++ pp lvalue
 
-eval (EVar ident) =
-    gets stEnv >>=
-    return . clVal . Map.findWithDefault nullClosure ident . envMap
+eval (EVar ident) = do
+    b <- lookupBinding ident
+    case b of
+        Just cl -> return (clVal cl)
+        _       -> throwError $ "variable \"" ++ ident ++ "\" not found"
+
 
 eval (EUOp op x) =
     eval x >>= uOp op
@@ -254,11 +298,6 @@ takeLogical _  _           = Nothing
 -- table operations
 -- ============================================================================
 
-savingEnv m = do
-    env <- gets stEnv
-    result <- m `catchError` \e -> put env >> throwError e
-    put env
-    return result
 
 
 -- joins
@@ -285,7 +324,7 @@ tableJoin (JNatural il lexps [] ir) tl tr =
 tableJoin (JNatural il [] rexps ir) tl tr =
     tableJoin (JNatural il rexps rexps ir) tl tr
 
-tableJoin (JNatural il lexps rexps ir) tl tr = savingEnv $ do
+tableJoin (JNatural il lexps rexps ir) tl tr = enterNewScope $ do
     lassocs <- liftM (`zip` trows tl) (evalRows tl lexps)
     rmap    <- buildRowMap tr rexps
     return $
@@ -335,7 +374,7 @@ sharedStrings xs ys =
 
 -- selection of table
 
-select table expr = savingEnv $ do
+select table expr = enterNewScope $ do
     selections <- evalRows table [expr] >>= return . map head
     let vecs' = map (catMaybes . zipWith sel1 selections . vlist) vecs
     return . VTable $
@@ -384,7 +423,7 @@ project table (PSTable True pscols) = do
     getIndex (PSCNExpr envp) = toNvp envp >>=
                                tableColumnLookupIndex table . fst
 
-project table (PSTable False pscols) = savingEnv $ do
+project table (PSTable False pscols) = enterNewScope $ do
     pscols'  <- expandSpecials table pscols
     colNames <- mapM getName pscols'
     colExps  <- mapM getExp pscols'
