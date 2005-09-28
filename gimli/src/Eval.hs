@@ -1,16 +1,11 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Eval (
-    eval, run, newTopLevel,
-    clExp, clVal,
-    lookupBinding,
-    EvalState
+    evaluate
 ) where
 
-import Control.Exception
-import Control.Monad.Cont
+import Control.Exception (try)
 import Control.Monad.Error
-import Control.Monad.RWS
 import Data.Array
 import Data.Either
 import Data.IORef
@@ -20,113 +15,33 @@ import qualified Data.Set as Set
 import Data.Maybe
 import Text.Regex
 
-import EvalMonad
+import EvalKernel
 import Expr
 import LoadData
 import PPrint
 import Utils
 import Glob
 
--- ===========================================================================
--- Eval monad
--- ===========================================================================
+-- ============================================================================
+-- top-level evaluation
+-- ============================================================================
 
-type EvalError   = String
-type EvalState   = FrameStack
-type LogS        = [String] -> [String]
-type Eval r a    = EvalM EvalError FrameStack () LogS r a
-
-type FrameStack  = [Frame]
-type Env         = Map.Map Identifier Closure
-data Frame       = Frame
-    { frameEnvRef :: IORef Env
-    }
-
-type Closure = (Value, Maybe Expr)
-
-clVal = fst
-clExp = snd
-
-nullClosure = (VNull, Nothing)
-
-newFrame :: IO Frame
-newFrame = do
-    env <- newIORef emptyEnv
-    return $ Frame { frameEnvRef = env }
-
-newTopLevel :: IO FrameStack
-newTopLevel = do
-    fr <- newFrame
-    return [fr]
-
-getLocalFrame :: Eval r Frame
-getLocalFrame =
-    asks $ head
-
-modifyFrameEnv :: (Env -> Env) -> Frame -> Eval r Env
-modifyFrameEnv f frame = liftIO $ do
-    let envRef = frameEnvRef frame
-    env <- readIORef envRef
-    let env' = f env
-    writeIORef envRef env'
-    return env'
-
-modifyLocalEnv :: (Env -> Env) -> Eval r Env
-modifyLocalEnv f =
-    modifyFrameEnv f =<< getLocalFrame
-
-enterNewScope :: Eval r a -> Eval r a
-enterNewScope m = do
-    fr <- liftIO newFrame
-    local (fr:) m
-
-emptyEnv :: Env
-emptyEnv  = Map.empty
-
-bindExpr :: Identifier -> Expr -> Eval r Value
-bindExpr ident valExpr = do
-    val <- eval valExpr
-    bindValExpr ident val (Just valExpr)
-
-bindVal :: Identifier -> Value -> Eval r Value
-bindVal ident val =
-    bindValExpr ident val Nothing
-
-bindValExpr :: Identifier -> Value -> Maybe Expr -> Eval r Value
-bindValExpr ident val valExpr = do
-    modifyLocalEnv $ Map.insert ident (val, valExpr)
-    return val
-
-lookupBinding :: Identifier -> Eval r (Maybe Closure)
-lookupBinding s = do
-    envRefStack <- asks (map frameEnvRef)
-    callCC $ \esc -> do
-        mapM_ (search esc s) envRefStack
-        return Nothing
-  where
-    search esc s envRef = do
-       env <- liftIO $ readIORef envRef
-       case Map.lookup s env of
-           Just cl -> esc (Just cl)
-           _       -> return Nothing
-
-
-run :: EvalState -> Expr -> IO (Either EvalError Value, EvalState, LogS)
-run st expr = do
+evaluate :: EvalState -> Expr -> IO (Either EvalError Value, EvalState, LogS)
+evaluate st expr = do
     (errOrVal, _, log) <- runEval st () (evalL expr)
     return (errOrVal, st, log)
 
-evalL x = bindExpr "LAST" x
-
-evalString e     = eval e >>= asString
-evalTable e      = eval e >>= asTable
-evalBool e       = eval e >>= asBool
-evalVector e     = eval e >>= asVector
-evalVectorNull e = eval e >>= asVectorNull
 
 -- ===========================================================================
 {- | Evaluate an expression to result in a Value -}
 -- ===========================================================================
+
+-- eval and bind to LAST variable
+
+evalL x = evalAndBind "LAST" x
+
+
+-- eval
 
 eval :: Expr -> Eval r Value
 
@@ -149,7 +64,7 @@ eval (EVector es) = do
     return . VVector . mkVector $ concatMap vlist vecs
 
 eval (EBind lvalue ev)
-    | EVar ident <- lvalue = bindExpr ident ev
+    | EVar ident <- lvalue = evalAndBind ident ev
     | otherwise            = throwError $
                              "cannot bind to non-lvalue: " ++ pp lvalue
 
@@ -158,7 +73,6 @@ eval (EVar ident) = do
     case b of
         Just cl -> return (clVal cl)
         _       -> throwError $ "variable \"" ++ ident ++ "\" not found"
-
 
 eval (EUOp op x) =
     eval x >>= uOp op
@@ -174,7 +88,6 @@ eval (ESeries es)
 
 eval (EBlock es) =
     foldM (\_ e -> eval e) VNull es
-
 
 eval (EIf etest etrue maybeEfalse) = do
     doIfBody etest etrue maybeEfalse id
@@ -260,6 +173,21 @@ doIfBody etest etrue maybeEfalse trueTest = do
         else maybe (return testResult) eval maybeEfalse
 
 
+-- typed-value helpers
+
+evalString e     = eval e >>= asString
+evalTable e      = eval e >>= asTable
+evalBool e       = eval e >>= asBool
+evalVector e     = eval e >>= asVector
+evalVectorNull e = eval e >>= asVectorNull
+
+
+-- binding helper
+
+evalAndBind :: Identifier -> Expr -> Eval r Value
+evalAndBind ident valExpr = do
+    val <- eval valExpr
+    bindValExpr ident val (Just valExpr)
 
 
 -- ============================================================================

@@ -21,7 +21,7 @@ import Expr (asNum)
 import qualified Eval as Eval
 import PPrint
 import Utils
-import qualified EvalMonad as EM
+import qualified EvalKernel as EV
 
 -- Config
 
@@ -38,7 +38,7 @@ main = do
 
 
 initialState term = do
-    topLevel <- Eval.newTopLevel
+    topLevel <- EV.newTopLevel
     (`execStateT` s0 {stEvalState = topLevel}) . (`runContT` return) $ do
         userconf <- liftIO $ handle (\_ -> return []) $ do
             home <- getEnv "HOME"
@@ -73,7 +73,7 @@ welcome =
 data ReplState r a =
     ReplState { stExit      :: a -> ContT r (StateT (ReplState r a) IO) a
               , stTerminal  :: Bool
-              , stEvalState :: Eval.EvalState
+              , stEvalState :: EV.EvalState
               , stContinue  :: Maybe String
               }
 
@@ -139,7 +139,7 @@ evalContinue err cmd = do
 
 doEval expr = do
     st <- gets stEvalState
-    (val, st', logS) <-  liftIO $ Eval.run st expr
+    (val, st', logS) <-  liftIO $ Eval.evaluate st expr
     let msgs = logS []
     when (not (null msgs)) (liftIO $ putStr (unlines msgs))
     putEvalState st'
@@ -157,14 +157,14 @@ getFormatter = do
 getBinding varname = do
     evalState <- gets stEvalState
     (result, _, _) <- liftIO $
-        EM.runEval evalState () (Eval.lookupBinding varname)
+        EV.runEval evalState () (EV.lookupBinding varname)
     return $ case result of
         Right x -> x
         _       -> Nothing
 
 getBindingValue varname = do
     v <- getBinding varname
-    return $ v >>= return . Eval.clVal
+    return $ v >>= return . EV.clVal
 
 mkFormatter :: Int -> Int -> [String] -> [String]
 mkFormatter rows cols ss =
@@ -198,7 +198,7 @@ sysHelp _ =
 
 sysExplain cmd = do
     binding <- getBinding varname
-    return . (++"\n") $ maybe nsvar (maybe nsvar pp . Eval.clExp) binding
+    return . (++"\n") $ maybe nsvar (maybe nsvar pp . EV.clExp) binding
   where
     varname = concat . tail $ words cmd
     nsvar   = "the variable \"" ++ varname
