@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 37;
+use Test::More tests => 38;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -29,6 +29,11 @@ evals_ok( 'glob("*/NO_SUCH_FILE")', 'NULL' );
 evals_ok( 'glob("*/primitives.t","*/NO_SUCH_FILE")', '"./test/primitives.t"' );
 evals_ok( 'glob(1)', qr/error.* not a string/ );
 evals_ok( 'glob()', 'NULL' );
+
+
+# inspect
+
+evals_ok( 'inspect(1)', "1 => 1\nNULL" );
 
 
 # length

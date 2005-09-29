@@ -18,7 +18,7 @@ primitives = pfile ++ words "in" ++ ises ++ kernel ++ table
                            , words "csv tsv wsv"
                            ]
     ises   = map ("is." ++) $ words "na"
-    kernel = words "glob uniq length match sort"
+    kernel = words "glob inspect length match sort uniq"
     table  = words "names"
 
 primitivesSet = Set.fromList primitives

@@ -653,6 +653,7 @@ doPrim' (prim@Prim { primName=name }) args givenArgs =
     case name of
     "in"        -> args2 primIn
     "glob"      -> argsFlatten primGlob
+    "inspect"   -> primInspect args
     "is.na"     -> args1 primIsNa
     "length"    -> argsFlatten primLength
     "match"     -> primMatch name args
@@ -713,6 +714,14 @@ primIn nm velems vset = do
     es  <- arg1of nm $ liftM vlist (evalVector velems)
     set <- arg2of nm $ liftM (Set.fromList . vlist) (evalVector vset)
     return . mkVectorValue $ map (SLog . (`Set.member` set)) es
+
+primInspect args = do
+    mapM_ inspect args
+    return VNull
+  where
+    inspect expr =
+        eval expr >>=
+        liftIO . putStrLn . ((pp expr ++ " => ") ++) . pp
 
 primIsNa nm arg = do
     argVal <- eval arg
