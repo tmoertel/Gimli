@@ -1,6 +1,7 @@
 MANIFEST
 Makefile
 README
+eg/
 script/smoke
 src/CSV/Export.hs
 src/CSV/Parser.hs

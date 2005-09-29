@@ -1,0 +1,199 @@
+###############################################################################
+#
+# Worked Gimli examples
+# Tom Moertel <tom@moertel.com>
+# 2005-09-30
+#
+# This is valid Gimli file that you can execute:
+# ../../app/gimli < examples1.gimli
+#
+###############################################################################
+
+#==============================================================================
+# typical task 1: extend pedigree structure w/ genotype info
+#==============================================================================
+
+file1  <- read.wsv("file1.wsv");
+
+# File "file1.wsv" contents:
+# ID geno marker
+# 1  1/1  m1
+# 1  2/2  m2
+# 2  1/2  m1
+# 2  2/1  m2
+
+ped.in <- read.wsv("ped.wsv");
+
+# File "ped.wsv" contents:
+# ID ped per
+# 1  1   1
+# 2  1   2
+
+# Helper that verifies that a table's IDs are unique.  If the table
+# checks out, it is returned; otherwise, NULL is returned, assuring an
+# error, should any table-operations be attempted on the bad table.
+
+ucheck <- function(t, id="ID") do
+  ids <- t$((id))$1;  # get id column (named by id variable) as a vector
+  if length(uniq(ids)) == length(ids) then t
+  else do
+      print("non-unique ID in table:", t);
+      NULL
+  end
+end;
+
+# Create a helper function to full-join two tables and then merge
+# their IDs, verifying ID uniqueness for each table first.
+
+full.join.and.merge.ids <- function(l,r) do
+  (ucheck(l) === ucheck(r)) $ (+ID = ID unless ID.1; -ID.1)
+end;
+
+# This helper will extend a pedigree structure with the given
+# genotype information, placing each marker into its own column.
+
+extend.ped <- function(ped, geno) do
+  for m in uniq(geno$marker) do                   # for each unique marker ...
+    g <- geno[marker==m]$(ID, "geno."++m = geno); # extract markers matching m
+    ped <- full.join.and.merge.ids(ped, g)        # & join them into ped table
+  end
+end;
+
+print( extend.ped(ped.in, file1) );
+
+# Output:
+#   ID ped per geno.m1 geno.m2
+# 1  1   1   1   "1/1"   "2/2"
+# 2  2   1   2   "1/2"   "2/1"
+
+
+#==============================================================================
+# typical task 2 (transposed version of task 1)
+#==============================================================================
+
+file3t <- read.wsv("file3.wsv", transpose=T);
+
+# File "file3.wsv" contents:
+# marker 1   2
+# m1     1/1 1/2
+# m2     2/2 2/1
+
+# This helper does the same as the earlier extend.ped but is works
+# on tranposed data.
+
+extend.t.ped <- function(ped, genoT) do
+  ms <- names(genoT);  # get column names as vector
+  ids <- genoT$marker; # get IDs as vector, too
+  for m in ms[ms != "marker"] do
+      t <- table(ID = ids, "geno."++m = genoT$((m))$1);
+      ped <- full.join.and.merge.ids(ped, t)
+  end
+end;
+
+print( extend.t.ped(ped.in, file3t) );
+
+# Output:
+#   ID ped per geno.m1 geno.m2
+# 1  1   1   1   "1/1"   "2/2"
+# 2  2   1   2   "1/2"   "2/1"
+
+
+#==============================================================================
+# typical task 3:  (task 1 split into many marker-specific files)
+#==============================================================================
+
+# This helper takes a pedigree structure and a list of files and then
+# extends the pedigree by the marker information in the file.  It
+# makes use of our earlier extend.ped function.
+
+extend.ped.by.many.files <- function(ped, pathnames) do
+  for f in pathnames do
+    g <- read.wsv(f);
+    ped <- extend.ped(ped, g)
+  end
+end;
+
+# The glob() function can be used to find files whose pathnames match
+# the given shell "globbing" pattern(s).  Here we use it to find the
+# marker-specific genotype files (of which I have two).
+
+marker.files <- glob("mfile*.wsv");
+
+# File "mfile1.wsv" contents:
+# ID geno marker
+# 1 1/1 m1
+# 2 1/2 m1
+
+# File "mfile2.wsv" contents:
+# ID geno marker
+# 1 2/2 m2
+# 2 2/1 m2
+
+print( extend.ped.by.many.files(ped.in, marker.files) );
+
+# Output:
+#   ID ped per geno.m1 geno.m2
+# 1  1   1   1   "1/1"   "2/2"
+# 2  2   1   2   "1/2"   "2/1"
+
+
+
+#==============================================================================
+# NA handling
+#==============================================================================
+
+# here we verify that NAs are handled as we would expect
+
+file1NA <- read.wsv("file1NA.wsv");
+
+# File "file1NA.wsv" conents:
+# ID geno marker
+# 1  1/1  m1
+# 1  2/2  m2
+# 3  1/2  m1    <--- note that this file has ID 3 but no ID 2
+# 3  2/1  m2
+
+print( extend.ped(ped.in, file1NA) );
+
+# Output:
+#   ID ped per geno.m1 geno.m2
+# 1  1   1   1   "1/1"   "2/2"
+# 2  2   1   2      NA      NA
+# 3  3  NA  NA   "1/2"   "2/1"
+
+
+#==============================================================================
+# Non-unique ID handling
+#==============================================================================
+
+file1NAdup <- read.wsv("file1NAdup.wsv");
+
+# File "file1NAdup.wsv" contents:
+# ID geno marker
+# 1  1/1  m1
+# 1  2/2  m2
+# 3  1/2  m2    <--- oops, there are two (ID=3,marker=m2) pairs
+# 3  2/1  m2
+
+print( extend.ped(ped.in, file1NAdup) )
+
+# Output:
+# "non-unique ID in table:"
+#   ID geno.m2
+# 1  1   "2/2"
+# 2  3   "1/2"
+# 3  3   "2/1"
+# error: during function application: 
+# during function application:
+# during for m in ...:
+# during function application:
+# argument 1 of $:
+# argument 1 of $:
+# argument 2 of join: not a table
+
+
+
+# The final semicolon tells Gimli not to print the final result, which
+# would just duplicate the output of the previous print expression
+
+;
