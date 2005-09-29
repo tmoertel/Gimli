@@ -23,6 +23,7 @@ import Utils
 import Glob
 
 
+
 -- ============================================================================
 -- Type for expressing Gimli-evaluatable actions
 -- ============================================================================
@@ -59,16 +60,19 @@ eval :: Expr -> Eval r Value
 eval (EVal v) =
     return v
 
+eval (EFunc args body) =
+    liftM (VFunc args body) getScope
+
 eval (EApp (EVal (VVector (V _ _ [SStr fname]))) args) =
     eval (EApp (EVar fname) args)
 
-eval (EApp fnExp argExps) =
+eval (EApp fnExp givenArgs) =
     during "function application" $ do
     fn <- eval fnExp
     case fn of
-        VPrim prim      -> doPrim prim argExps
-        VFunc args prog -> throwError "non-primitive functions not implemented"
-        x               -> throwError "cannot apply non-function"
+        VPrim prim          -> doPrim prim givenArgs
+        VFunc args prog ctx -> doFnCall (args, prog, ctx) givenArgs
+        x                   -> throwError "cannot call a non-function"
 
 eval (EVector es) = do
     vecs <- argof "vector constructor" $ mapM evalVectorNull es
@@ -212,6 +216,79 @@ evalAndBindOver :: Identifier -> Expr -> Eval r Value
 evalAndBindOver ident valExpr = do
     val <- eval valExpr
     bindOverValExpr ident val (Just valExpr)
+
+
+-- function-call helper
+
+doFnCall :: (ArgList, Expr, EvalCtx Value Expr) -> [GivenArg] -> Eval r Value
+doFnCall (formalArgs, body, ctx) givenArgs = do
+
+    -- match args first by name
+
+    inexactBinds <- liftM Map.fromList $
+                    mapM inexactMatch (Map.toList namedRest)
+
+    -- and then by position
+
+    let formalUnmatched = formalRest `Map.difference` inexactBinds
+    let formalByPos = [(n,e) | arg <- argList formalArgs
+                             , let (n,e) = pair (argName, argDefault) arg
+                             , n `Map.member` formalUnmatched]
+    when (length formalByPos < length orderGivens) $
+        throwError $ "too many arguments given"
+    let posBinds = Map.fromList $ zip (map fst formalByPos) orderGivens
+
+    -- summarize all formals bound to given arguments
+
+    let givenBinds = foldl1 Map.union [exactBinds, inexactBinds, posBinds]
+
+    -- the remaining unbound formals must have defaults
+
+    let unboundFormals = argMap formalArgs `Map.difference` givenBinds
+    defaultBinds <- (`mapM` Map.toList unboundFormals) $ \(nm, def) ->
+        case def of
+            Just e -> return (nm, e)
+            _      -> throwError $
+                      "no value provided for required argument \"" ++ nm++ "\""
+
+    -- evaluate given expressions in the current (calling) context
+
+    givenValBindings <- toValueBindings (Map.toList givenBinds)
+
+    -- enter function's context and then create a new scope for local bindings
+
+    withinScope ctx . enterNewScope $ do
+
+        -- bind values to formal arguments
+
+        mapM_ (uncurry bindVal) givenValBindings
+        mapM_ (uncurry bindVal) =<< toValueBindings defaultBinds
+      
+        -- finally, evaluate the function body
+
+        eval body
+
+  where
+    namedGivens = Map.fromList [ (n,e) | GivenArg (Just n) e <- givenArgs ]
+    orderGivens = [ e | GivenArg Nothing e <- givenArgs ]
+
+    exactBinds  = namedGivens `Map.intersection` formals
+    formalRest  = formals `Map.difference` exactBinds
+    namedRest   = namedGivens `Map.difference` exactBinds
+
+    formals     = argMap formalArgs
+
+    inexactMatch :: (String, Expr) -> Eval r (String, Expr)
+    inexactMatch (nm, e) = case Map.keys matches of
+        []    -> throwError $ "no formal argument matches \"" ++nm++ "\""
+        [fnm] -> return (fnm, e)
+        fnms  -> throwError $ "argument \"" ++ nm ++ "\" is ambiguous; "
+                          ++ "matches " ++ unwords (map show fnms)
+      where
+        (_, greater) = Map.split nm formalRest
+        (matches,_)  = Map.split (nm++"~") greater
+
+    toValueBindings neps = mapM (\(n,e) -> liftM ((,) n) (eval e)) neps
 
 -- ============================================================================
 -- vector operations
@@ -546,8 +623,10 @@ vectorize' _ _ _ = throwError "vector operation requires two vectors"
 -- primitive functions
 -- ============================================================================
 
-doPrim :: Primitive -> [Expr] -> Eval r Value
-doPrim (prim@Prim { primName=name }) args =
+doPrim :: Primitive -> [GivenArg] -> Eval r Value
+doPrim prim args = doPrim' prim (map gaExpr args)
+
+doPrim' (prim@Prim { primName=name }) args =
     case name of
     "in"        -> args2 primIn
     "glob"      -> argsFlatten primGlob

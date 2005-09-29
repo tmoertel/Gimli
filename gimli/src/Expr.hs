@@ -6,7 +6,9 @@ module Expr (
     BinOp(..), UnaryOp(..),
     PSpec(..), PSCol(..), ENVPair(..), TableSpec(..),
     JoinOp(..), JoinInclusion(..),
-    ArgList, Arg(..),
+    ArgList(..), mkArgList, emptyArgList,
+    Arg(..),
+    GivenArg(..),
     Primitive(..),
 
     Value(..),
@@ -26,27 +28,29 @@ where
 
 import Control.Monad
 import Data.List (intersperse)
+import qualified Data.Map as Map
 
 import CoreTypes
-import Scalar
-import Vector
-import Table
+import EvalKernel (EvalCtx)
 import PPrint
+import Scalar
+import Table
+import Vector
+import Utils
 
 -- ============================================================================
 -- core expressions
 -- ============================================================================
 
-type Prog = [Expr] -- ^ A program is a series of expressions
-
 data Expr
-    = EApp Expr [Expr]
+    = EApp Expr [GivenArg]
     | EBinOp !BinOp Expr Expr
     | EBlock [Expr]
     | EBind Expr Expr
     | EBindOver Expr Expr
     | EIf Expr Expr (Maybe Expr)
     | EFor !Identifier Expr Expr
+    | EFunc ArgList Expr
     | EUnless Expr Expr (Maybe Expr)
     | EJoin !JoinOp Expr Expr
     | ELocal Expr
@@ -83,6 +87,9 @@ instance Show Expr where
     showsPrec _ (ETable tspecs)     = ss "table" . showParen True tspecs'
       where
         tspecs' = commajoin tspecs
+
+    showsPrec _ (EFunc args body)   = ss "func" . shows args . ss " "
+                                    . shows body
 
     showsPrec p (EApp e args)              = let q = 13 in
                                              showParen (p > q) $
@@ -252,17 +259,46 @@ data JoinInclusion
 -- ============================================================================
 -- ============================================================================
 
-type ArgList = [Arg]
-data Arg     = Arg
-    { argName :: !String
+data ArgList = ArgList
+    { argList :: [Arg]
+    , argMap  :: Map.Map String (Maybe Expr)
     }
-    deriving (Eq,Ord,Show,Read)
+    deriving (Eq,Ord)
+
+mkArgList :: [Arg] -> ArgList
+mkArgList args =
+    ArgList args $ Map.fromList (map (pair (argName, argDefault)) args)
+
+emptyArgList = ArgList [] Map.empty
+
+instance Show ArgList where
+    showsPrec _ args = showParen True (commajoin (argList args))
+
+data Arg = Arg
+    { argName    :: !String
+    , argDefault :: Maybe Expr
+    }
+    deriving (Eq,Ord)
+
+instance Show Arg where
+    showsPrec _ arg = ss (argName arg)
+                    . maybe id (\a -> ss "=" . shows a) (argDefault arg)
 
 data Primitive = Prim
     { primName :: !String
     , primArgs :: ArgList
     }
-    deriving (Eq,Ord,Show,Read)
+    deriving (Eq,Ord,Show)
+
+data GivenArg = GivenArg
+    { gaName :: (Maybe Identifier)
+    , gaExpr :: Expr
+    }
+    deriving (Eq, Ord)
+
+instance Show GivenArg where
+    showsPrec _ (GivenArg name e) =
+        maybe id (\i -> ss i . ss "=") name . shows e
 
 
 -- ============================================================================
@@ -275,19 +311,24 @@ data Primitive = Prim
 data Value
   = VVector !Vector
   | VTable !Table
-  | VFunc !ArgList !Prog
   | VPrim !Primitive
   | VNull
+  | VFunc !ArgList !Expr (EvalCtx Value Expr)
     deriving (Ord, Eq)
+
+instance Eq (EvalCtx Value Expr) where
+    a == b = True
+
+instance Ord (EvalCtx Value Expr) where
+    a `compare` b = EQ
 
 instance Show Value where
     showsPrec _ (VVector v)       = shows v
     showsPrec _ (VTable t)        = shows t
     showsPrec _  VNull            = showString "NULL"
-    showsPrec _ (VFunc args prog) =
-        ss "function"
-        . showParen True (xjoin ", " (map (ss . argName) args))
-        . ss " { " . (xjoin "; " (map shows prog)) . ss " }"
+    showsPrec _ (VFunc args body _)
+                                  = ss "func" . shows args . ss " "
+                                  . shows body
     showsPrec _ (VPrim prim)      = ss (primName prim)
 
 instance PPrint Value where

@@ -54,9 +54,10 @@ infixExpr =
 factor =
         nullExpr
     <|> parens expr
+    <|> tableExpr
+    <|> functionExpr
     <|> vectorExpr
     <|> varExpr
-    <|> tableExpr
     <|> ifThenElseExpr
     <|> forExpr
     <|> blockExpr
@@ -66,11 +67,25 @@ factor =
 tableExpr =
     reserved "table" >> parens (commaSep1 tspec) >>= return . ETable
 
+tspec = do
+    (liftM TCol anypair) <|> (liftM TSplice expr)
+
 localExpr =
     reserved "local" >> liftM ELocal expr
 
-tspec = do
-    (liftM TCol anypair) <|> (liftM TSplice expr)
+functionExpr = do
+    reserved "func"
+    args <- parens formalArgs
+    body <- expr
+    return $ EFunc args body
+
+formalArgs = do
+    liftM mkArgList . commaSep $ do
+        name <- identifier
+        defaultExpr <- option Nothing $ do
+            reservedOp "="
+            liftM Just expr
+        return $ Arg name defaultExpr
 
 commaPair =
     sepPair comma
@@ -86,7 +101,7 @@ varExpr = do
     return (primOrVar s)
 
 primOrVar s =
-    if isPrimitive s then EVal (VPrim $ Prim s []) else EVar s
+    if isPrimitive s then EVal (VPrim $ Prim s emptyArgList) else EVar s
 
 nullExpr = do
     reserved "NULL" <|> try (brackets $ return ())
@@ -159,8 +174,13 @@ envpair = do
 anypair = do
     try nvpair <|> try envpair
 
+givenArg = (<?> "function argument") $ do
+    (try nvpair >>= \(NVP n e) -> return (GivenArg (Just n) e))
+    <|>
+    (liftM (GivenArg Nothing) expr)
+
 opTable =
-    [ [ sfop "("  EApp (commaSep expr `followedBy` symbol ")")
+    [ [ sfop "("  EApp (commaSep givenArg `followedBy` symbol ")")
       ]
     , [ vopr  "^" BinOpPower
       ]
@@ -229,7 +249,7 @@ opTable =
     infixlFn      = Infix ifn AssocLeft
       where
         ifn       = between pct pct identifier >>= return . apf
-        apf s l r = EApp (primOrVar s) [l,r]
+        apf s l r = EApp (primOrVar s) $ map (GivenArg Nothing) [l,r]
         pct       = symbol "%"
     op a f assoc  = Infix (reservedOp a >> return f) assoc
     opx a f assoc = Infix (symbol a >> return f) assoc

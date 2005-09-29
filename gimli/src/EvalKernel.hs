@@ -3,7 +3,7 @@
 module EvalKernel (
     EvalCtx(..), EvalError, LogS,
     EvalG, runEval,
-    enterNewScope,
+    getScope, enterNewScope, withinScope,
     lookupBinding, bindVal, bindValExpr, bindOverValExpr,
     newTopLevel,
     clExp, clVal
@@ -101,11 +101,18 @@ modifyLocalEnv :: (Env v e -> Env v e) -> EvalG r v e (Env v e)
 modifyLocalEnv f =
     modifyFrameEnv f =<< getLocalFrame
 
+getScope :: EvalG r v e (EvalCtx v e)
+getScope = ask
+
 enterNewScope :: EvalG r v e a -> EvalG r v e a
 enterNewScope m = do
     lf <- getLocalFrame
     fr <- liftIO $ newFrame (Just lf)
     local (modifyCtxFrames (fr:)) m
+
+withinScope :: EvalCtx v e -> EvalG r v e a -> EvalG r v e a
+withinScope ctx m =
+    local (const ctx) m
 
 emptyEnv :: Env v e
 emptyEnv  = Map.empty

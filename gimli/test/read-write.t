@@ -333,7 +333,7 @@ sub write_tsv_evals_exact_ok {
 
 sub write_file_evals_exact_ok {
     my ($kind, $gimli_cmd, $expected) = @_;
-    with_file("", sub {
+    with_file("--write-file-exact-ok-initial-content--", sub {
         run_gimli( qq[t <- $gimli_cmd; write.$kind(t,"$_")] );
         is( read_file($_), $expected ) ;
     } );
@@ -342,6 +342,7 @@ sub write_file_evals_exact_ok {
 sub with_file {
     my ($content, $testfn) = @_;
     my $tmp = File::Temp->new;
+    $tmp->autoflush(1);
     print $tmp $content;
     local $_ = $tmp->filename;
     my $level = $Test::Builder::Level;
