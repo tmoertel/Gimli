@@ -9,7 +9,7 @@ import Control.Monad.Error
 import Data.Array
 import Data.Either
 import Data.IORef
-import Data.List (group, intersperse, mapAccumL, transpose, (\\))
+import Data.List (group, intersperse, mapAccumL, sort, transpose, (\\))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe
@@ -660,6 +660,7 @@ doPrim' (prim@Prim { primName=name }) args givenArgs =
     "read.csv"  -> argsR primReadCsv
     "read.tsv"  -> argsR primReadTsv
     "read.wsv"  -> argsR primReadWsv
+    "sort"      -> argsFlatten primSort
     "write.csv" -> argsW primWriteCsv
     "write.tsv" -> argsW primWriteTsv
     "write.wsv" -> argsW primWriteWsv
@@ -782,6 +783,10 @@ primGlob nm ss = do
             SStr s -> return s
             _      -> throwError "not a string"
     liftIO (mapM glob pats >>= return . mkVectorValue . map SStr . concat)
+
+
+primSort nm xs = do
+    return . mkVectorValue $ sort xs
 
 primUniq nm xs = do
     return . mkVectorValue . concat . snd $ mapAccumL f Set.empty xs
