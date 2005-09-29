@@ -102,12 +102,11 @@ eval (EBinOp op el er) = do
     r <- eval er
     binOp op l r
 
-eval (ESeries es)
-    | es == []  = return VNull
-    | otherwise = foldr1 (>>) $ map evalL es
+eval (ESeries es) =
+    foldM (\_ e -> evalL e) VNull es
 
 eval (EBlock es) =
-    foldM (\_ e -> eval e) VNull es
+    foldM (\_ e -> evalL e) VNull es
 
 eval (EIf etest etrue maybeEfalse) = do
     doIfBody etest etrue maybeEfalse id
