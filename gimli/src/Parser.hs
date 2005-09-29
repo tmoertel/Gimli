@@ -14,17 +14,25 @@ import Expr
 import Lexer
 import Primitives
 
+import Debug.Trace
+
 gimlParse =
     parse $ do
         whiteSpace
-        es <- semiSep1 expr
+        prog <- exprs
+        whiteSpace
         eof
-        return $ case es of
+        return $ case prog of
             [e] -> e
-            _   -> ESeries es
+            _   -> EBlock prog
+
 
 gimlReadScalar =
-    parse (whiteSpace >> scalarLiteralExpr) "string"
+    (`parse` "string") $ do
+        whiteSpace
+        sc <- scalarLiteralExpr
+        eof
+        return sc
 
 gimlParseTable :: MonadError String m => [[String]] -> m Table
 gimlParseTable rows = do
@@ -38,8 +46,11 @@ gimlParseTable rows = do
     parseTableElem s =
         either (const (SStr s)) id (gimlReadScalar s)
 
+exprs :: Parser [Expr]
+exprs = semiSep expr
+
 expr :: Parser Expr
-expr =
+expr = do
         infixExpr
     <?> "expression"
 
@@ -144,7 +155,7 @@ blockExpr = do
         between (reserved "do") (reserved "end") blockContents
     <|> between (symbol "{") (symbol "}") blockContents
   where
-    blockContents = liftM EBlock (many expr)
+    blockContents = liftM EBlock exprs
 
 scalarLiteralExpr =
         numberLiteralExpr
@@ -264,6 +275,8 @@ opTable =
     infixFor      = (`Infix` AssocLeft) $ do
                         var <- forVarInFrag
                         return $ flip (EFor var)
+
+
 -- projection specs
 
 pspecExpr =
