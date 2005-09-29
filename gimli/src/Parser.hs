@@ -273,7 +273,9 @@ opTable =
                     return (ctor l r)
         bexprs    = option [] (braces (commaSep expr))
     infixFor      = (`Infix` AssocLeft) $ do
-                        var <- forVarInFrag
+                        reserved "for"
+                        var <- identifier
+                        symbol "in"
                         return $ flip (EFor var)
 
 
