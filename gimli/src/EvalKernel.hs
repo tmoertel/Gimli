@@ -1,8 +1,8 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module EvalKernel (
-    EvalCtx, EvalError, LogS,
-    Eval, runEval,
+    EvalCtx(..), EvalError, LogS,
+    EvalG, runEval,
     enterNewScope,
     lookupBinding, bindVal, bindValExpr, bindOverValExpr,
     newTopLevel,
@@ -16,9 +16,9 @@ import Control.Monad.Cont
 import Control.Monad.Error
 import Data.IORef
 
-import qualified Data.Map as Map
+import CoreTypes
 
-import Expr
+import qualified Data.Map as Map
 
 
 
@@ -47,49 +47,49 @@ resetEval m = ErrorT $ reset (runErrorT m)
 
 
 -- ===========================================================================
--- Eval monad
+-- | Generic evaluation kernel parameterized over prompt type 'r',
+--   value type 'v', expression type 'e', and result type 'a'.
 -- ===========================================================================
 
-type EvalError   = String
-type LogS        = [String] -> [String]
-type Eval r a    = EvalM EvalError EvalCtx () LogS r a
+type EvalError    = String
+type LogS         = [String] -> [String]
+type EvalG r v e a = EvalM EvalError (EvalCtx v e) () LogS r a
 
-data EvalCtx     = EvalCtx
-                   { ctxFrames   :: FrameStack
-                   , ctxTopLevel :: Frame
+data EvalCtx v e = EvalCtx
+                   { ctxFrames   :: FrameStack v e
+                   , ctxTopLevel :: Frame v e
                    }
-type Env         = Map.Map Identifier Closure
+type Env v e     = Map.Map Identifier (Closure v e)
 
-type FrameStack  = [Frame]
-data Frame       = Frame
-    { frameEnvRef :: IORef Env
+type FrameStack v e  = [Frame v e]
+data Frame v e   = Frame
+    { frameEnvRef :: IORef (Env v e)
+    , frameNext   :: Maybe (Frame v e)
     }
 
-type Closure = (Value, Maybe Expr)
+type Closure v e = (v, Maybe e)
 
 clVal = fst
 clExp = snd
 
-nullClosure = (VNull, Nothing)
-
-newFrame :: IO Frame
-newFrame = do
+newFrame :: (Maybe (Frame v e)) -> IO (Frame v e)
+newFrame nextFrame = do
     env <- newIORef emptyEnv
-    return $ Frame { frameEnvRef = env }
+    return $ Frame { frameEnvRef = env, frameNext = nextFrame }
 
-newTopLevel :: IO EvalCtx
+newTopLevel :: IO (EvalCtx v e)
 newTopLevel = do
-    fr <- newFrame
+    fr <- newFrame Nothing
     return $ EvalCtx { ctxFrames = [fr], ctxTopLevel = fr }
 
 modifyCtxFrames f ctx =
     ctx { ctxFrames = f (ctxFrames ctx) }
 
-getLocalFrame :: Eval r Frame
+getLocalFrame :: EvalG r v e (Frame v e)
 getLocalFrame =
     asks $ head . ctxFrames
 
-modifyFrameEnv :: (Env -> Env) -> Frame -> Eval r Env
+modifyFrameEnv :: (Env v e -> Env v e) -> Frame v e -> EvalG r v e (Env v e)
 modifyFrameEnv f frame = liftIO $ do
     let envRef = frameEnvRef frame
     env <- readIORef envRef
@@ -97,38 +97,40 @@ modifyFrameEnv f frame = liftIO $ do
     writeIORef envRef env'
     return env'
 
-modifyLocalEnv :: (Env -> Env) -> Eval r Env
+modifyLocalEnv :: (Env v e -> Env v e) -> EvalG r v e (Env v e)
 modifyLocalEnv f =
     modifyFrameEnv f =<< getLocalFrame
 
-enterNewScope :: Eval r a -> Eval r a
+enterNewScope :: EvalG r v e a -> EvalG r v e a
 enterNewScope m = do
-    fr <- liftIO newFrame
+    lf <- getLocalFrame
+    fr <- liftIO $ newFrame (Just lf)
     local (modifyCtxFrames (fr:)) m
 
-emptyEnv :: Env
+emptyEnv :: Env v e
 emptyEnv  = Map.empty
 
-bindVal :: Identifier -> Value -> Eval r Value
+bindVal :: Identifier -> v -> EvalG r v e v
 bindVal ident val =
     bindValExpr ident val Nothing
 
-bindValExpr :: Identifier -> Value -> Maybe Expr -> Eval r Value
+bindValExpr :: Identifier -> v -> Maybe e -> EvalG r v e v
 bindValExpr ident val valExpr = do
     modifyLocalEnv $ Map.insert ident (val, valExpr)
     return val
 
-bindOverValExpr :: Identifier -> Value -> Maybe Expr -> Eval r Value
+bindOverValExpr :: Identifier -> v -> Maybe e -> EvalG r v e v
 bindOverValExpr ident val valExpr = do
     frame <- findBindingFrame ident
     Map.insert ident (val, valExpr) `modifyFrameEnv` frame
     return val
 
-lookupBinding :: Identifier -> Eval r (Maybe Closure)
+lookupBinding :: Identifier -> EvalG r v e (Maybe (Closure v e))
 lookupBinding s = do
     liftM (maybe Nothing (Just . snd)) (lookupBindingAndFrame s)
 
-lookupBindingAndFrame :: Identifier -> Eval r (Maybe (Frame, Closure))
+lookupBindingAndFrame :: Identifier
+                      -> EvalG r v e (Maybe (Frame v e, Closure v e))
 lookupBindingAndFrame s = do
     frames <- asks ctxFrames
     callCC $ \esc -> do
@@ -145,7 +147,7 @@ lookupBindingAndFrame s = do
 -- | Find the frame that contains the given binding or, if not found,
 --   the top-level frame.
 
-findBindingFrame :: Identifier -> Eval r Frame
+findBindingFrame :: Identifier -> EvalG r v e (Frame v e)
 findBindingFrame s = do
     baf <- lookupBindingAndFrame s
     case baf of

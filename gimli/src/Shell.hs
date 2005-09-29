@@ -17,7 +17,7 @@ import qualified System.Posix.Terminal as Terminal
 import qualified Version as Version
 import qualified Name as Name
 import qualified Parser as Parser
-import Expr (asNum)
+import Expr (asNum, Value, Expr)
 import qualified Eval as Eval
 import PPrint
 import Utils
@@ -73,7 +73,7 @@ welcome =
 data ReplState r a =
     ReplState { stExit      :: a -> ContT r (StateT (ReplState r a) IO) a
               , stTerminal  :: Bool
-              , stEvalState :: EV.EvalCtx
+              , stEvalState :: EV.EvalCtx Value Expr
               , stContinue  :: Maybe String
               }
 

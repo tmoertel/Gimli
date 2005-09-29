@@ -1,7 +1,7 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Eval (
-    evaluate
+    Eval, evaluate
 ) where
 
 import Control.Exception (try)
@@ -22,11 +22,22 @@ import PPrint
 import Utils
 import Glob
 
+
+-- ============================================================================
+-- Type for expressing Gimli-evaluatable actions
+-- ============================================================================
+
+type Eval r a = EvalG r Value Expr a
+
+
 -- ============================================================================
 -- top-level evaluation
 -- ============================================================================
 
-evaluate :: EvalCtx -> Expr -> IO (Either EvalError Value, EvalCtx, LogS)
+evaluate :: EvalCtx Value Expr -- ^ context of evaluation
+         -> Expr               -- ^ expression to evaluation
+         -> IO (Either EvalError Value, EvalCtx Value Expr, LogS)
+            -- ^ action carrying out the evaluation
 evaluate st expr = do
     (errOrVal, _, log) <- runEval st () (evalL expr)
     return (errOrVal, st, log)
