@@ -91,11 +91,8 @@ eval (EBindOver lvalue ev)
 eval (ELocal e) = do
     enterNewScope (eval e)
 
-eval (EVar ident) = do
-    b <- lookupBinding ident
-    case b of
-        Just cl -> return (clVal cl)
-        _       -> throwError $ "variable \"" ++ ident ++ "\" not found"
+eval (EVar ident) =
+    getBindingValue ident
 
 eval (EUOp op x) =
     eval x >>= uOp op
@@ -168,6 +165,16 @@ eval (ETable tspecs) =
         return $ zipWith mkNVP (tcnames t) (elems (tvecs t))
     mkNVP n vec = NVP n (EVal $ VVector vec)
 
+
+-- variable-lookup helper
+
+getBindingValue ident = do
+    b <- lookupBinding ident
+    case b of
+        Just cl -> return (clVal cl)
+        _       -> throwError $ "variable \"" ++ ident ++ "\" not found"
+
+
 -- error-reporting helpers
 
 during :: String -> Eval r a -> Eval r a
@@ -223,6 +230,36 @@ evalAndBindOver ident valExpr = do
 doFnCall :: (ArgList, Expr, EvalCtx Value Expr) -> [GivenArg] -> Eval r Value
 doFnCall (formalArgs, body, ctx) givenArgs = do
 
+    (givenBinds, defaultBinds) <- computeFnBindings formalArgs givenArgs
+
+    -- evaluate given expressions in the current (calling) context
+
+    givenValBindings <- toValueBindings givenBinds
+
+    -- enter function's context and then create a new scope for local bindings
+
+    withinScope ctx . enterNewScope $ do
+
+        -- bind values to formal arguments
+
+        mapM_ (uncurry bindVal) givenValBindings
+        mapM_ (uncurry bindVal) =<< toValueBindings defaultBinds
+
+        -- finally, evaluate the function body
+
+        eval body
+
+toValueBindings neps = mapM (\(n,e) -> liftM ((,) n) (eval e)) neps
+
+
+
+-- functional-call bindings helper
+
+computeFnBindings :: ArgList    -- ^ formal arguments
+           -> [GivenArg] -- ^ arguments passed to function
+           -> Eval r ([(Identifier, Expr)],[(Identifier, Expr)]) -- ^ bindings
+computeFnBindings formalArgs givenArgs = do
+
     -- match args first by name
 
     inexactBinds <- liftM Map.fromList $
@@ -251,22 +288,7 @@ doFnCall (formalArgs, body, ctx) givenArgs = do
             _      -> throwError $
                       "no value provided for required argument \"" ++ nm++ "\""
 
-    -- evaluate given expressions in the current (calling) context
-
-    givenValBindings <- toValueBindings (Map.toList givenBinds)
-
-    -- enter function's context and then create a new scope for local bindings
-
-    withinScope ctx . enterNewScope $ do
-
-        -- bind values to formal arguments
-
-        mapM_ (uncurry bindVal) givenValBindings
-        mapM_ (uncurry bindVal) =<< toValueBindings defaultBinds
-      
-        -- finally, evaluate the function body
-
-        eval body
+    return (Map.toList givenBinds, defaultBinds)
 
   where
     namedGivens = Map.fromList [ (n,e) | GivenArg (Just n) e <- givenArgs ]
@@ -289,6 +311,7 @@ doFnCall (formalArgs, body, ctx) givenArgs = do
         (matches,_)  = Map.split (nm++"~") greater
 
     toValueBindings neps = mapM (\(n,e) -> liftM ((,) n) (eval e)) neps
+
 
 -- ============================================================================
 -- vector operations
@@ -624,9 +647,9 @@ vectorize' _ _ _ = throwError "vector operation requires two vectors"
 -- ============================================================================
 
 doPrim :: Primitive -> [GivenArg] -> Eval r Value
-doPrim prim args = doPrim' prim (map gaExpr args)
+doPrim prim args = doPrim' prim (map gaExpr args) args
 
-doPrim' (prim@Prim { primName=name }) args =
+doPrim' (prim@Prim { primName=name }) args givenArgs =
     case name of
     "in"        -> args2 primIn
     "glob"      -> argsFlatten primGlob
@@ -634,12 +657,12 @@ doPrim' (prim@Prim { primName=name }) args =
     "length"    -> argsFlatten primLength
     "match"     -> primMatch name args
     "names"     -> args1 primNames
-    "read.csv"  -> args1 primReadCsv
-    "read.tsv"  -> args1 primReadTsv
-    "read.wsv"  -> args1 primReadWsv
-    "write.csv" -> args2 primWriteCsv
-    "write.tsv" -> args2 primWriteTsv
-    "write.wsv" -> args2 primWriteWsv
+    "read.csv"  -> argsR primReadCsv
+    "read.tsv"  -> argsR primReadTsv
+    "read.wsv"  -> argsR primReadWsv
+    "write.csv" -> argsW primWriteCsv
+    "write.tsv" -> argsW primWriteTsv
+    "write.wsv" -> argsW primWriteWsv
     "uniq"      -> argsFlatten primUniq
   where
     args1 f = case args of
@@ -652,6 +675,38 @@ doPrim' (prim@Prim { primName=name }) args =
                argof name (mapM eval args >>= concatVals >>= asVectorNull)
     argErr n = throwError $ name ++ " requires " ++ show n
                                  ++ " argument(s), not " ++ show (length args)
+
+    argsR f = doFnStylePrim f' formalsForRead givenArgs where
+        f' = do file   <- getBindingValue "file"      >>= asString
+                header <- getBindingValue "header"    >>= asBool
+                tr     <- getBindingValue "transpose" >>= asBool
+                f name file header tr
+
+    formalsForRead = mkArgList $
+        [ Arg "file"      $ Nothing
+        , Arg "header"    $ Just (EVal trueValue)
+        , Arg "transpose" $ Just (EVal falseValue)
+        ]
+
+    argsW f = doFnStylePrim f' formalsForWrite givenArgs where
+        f' = do table  <- getBindingValue "table"     >>= asTable
+                file   <- getBindingValue "file"      >>= asString
+                header <- getBindingValue "header"    >>= asBool
+                f name table file header
+
+    formalsForWrite = mkArgList $
+        [ Arg "table"     $ Nothing
+        , Arg "file"      $ Nothing
+        , Arg "header"    $ Just (EVal trueValue)
+        ]
+
+doFnStylePrim body formalArgs givenArgs = do
+    (givenBinds, defaultBinds) <- computeFnBindings formalArgs givenArgs
+    givenValBindings <- toValueBindings givenBinds
+    enterNewScope $ do
+        mapM_ (uncurry bindVal) givenValBindings
+        mapM_ (uncurry bindVal) =<< toValueBindings defaultBinds
+        body
 
 primIn nm velems vset = do
     es  <- arg1of nm $ liftM vlist (evalVector velems)
@@ -685,33 +740,36 @@ primMatch nm args =
             Just (_     , _    , _    , xs) -> svec xs
     svec xs = mkVectorValue (map SStr xs)
 
-
-
 primNames nm etable =
     during "names" $ do
     t <- evalTable etable
     return . mkVectorValue . map SStr $ tcnames t
 
-primReadCsv = primReadX loadCsvTable
-primReadTsv = primReadX loadTsvTable
-primReadWsv = primReadX loadWsvTable
+primReadCsv n f h tr = primReadX loadCsvTable n f h tr
+primReadTsv n f h tr = primReadX loadTsvTable n f h tr
+primReadWsv n f h tr = primReadX loadWsvTable n f h tr
 
-primReadX parser nm efile =
-    liftM VTable $ parser =<< argof nm (evalString efile)
+primReadX parser nm file header tr =
+    liftM VTable (parser file header tr)
 
-primWriteCsv = primWriteX (printXsv ",")
-primWriteTsv = primWriteX (printXsv "\t")
-primWriteWsv = primWriteX (\v -> pp v ++ "\n")
+primWriteCsv, primWriteTsv, primWriteWsv
+    :: String -> Table -> String -> Bool -> Eval r Value
+primWriteCsv n t f h = primWriteX (printXsv "," h)  n t f
+primWriteTsv n t f h = primWriteX (printXsv "\t" h) n t f
+primWriteWsv n t f h = primWriteX (printTable h)  n t f
 
-printXsv sep table =
-    unlines . map (concat . intersperse sep) . (headings:) $ map (map pp) rows
+printTable :: Bool -> Table -> String
+printTable header table =
+    (if header then id else unlines . tail . lines) (pp table ++ "\n")
+
+printXsv sep header table =
+    unlines . (if header then id else tail) .
+    map (concat . intersperse sep) . (headings:) $ map (map pp) rows
   where
     headings = tcnames table
     rows     = trows table
 
-primWriteX printer nm etable efile = do
-    table <- arg1of nm $ evalTable etable
-    file  <- arg2of nm $ evalString efile
+primWriteX printer nm table file = do
     during nm $ do
         result <- liftIO . try $ writeFile file (printer table)
         case result of

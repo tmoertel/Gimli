@@ -19,7 +19,7 @@ gimlLexer =
       , reservedNames   = words $
                           " T TRUE F FALSE NA NULL table" ++
                           " if then else unless for do end" ++
-                          " local func table"
+                          " local func function table"
       , reservedOpNames = gimlOps
       , opStart         = oneOf . nub $ head gimlOps
       , opLetter        = oneOf . nub $ concatMap tail gimlOps

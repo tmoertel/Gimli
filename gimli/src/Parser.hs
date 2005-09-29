@@ -74,7 +74,7 @@ localExpr =
     reserved "local" >> liftM ELocal expr
 
 functionExpr = do
-    reserved "func"
+    reserved "function" <|> reserved "func"
     args <- parens formalArgs
     body <- expr
     return $ EFunc args body

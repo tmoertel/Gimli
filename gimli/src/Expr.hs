@@ -19,6 +19,8 @@ module Expr (
         concatVals,
         test,
 
+    trueValue, falseValue,
+
     module CoreTypes,
     module Scalar,
     module Vector,
@@ -54,7 +56,6 @@ data Expr
     | EUnless Expr Expr (Maybe Expr)
     | EJoin !JoinOp Expr Expr
     | ELocal Expr
-    | EPrimitive !Identifier
     | EProject Expr !PSpec
     | ESelect Expr Expr
     | ESeries [Expr]
@@ -401,3 +402,9 @@ test (VVector v) = case vlist v of
                        [SNa]        -> False
                        _            -> True
 test _           = True
+
+
+-- commonly use value constants
+
+trueValue  = mkVectorValue [SLog True]
+falseValue = mkVectorValue [SLog False]

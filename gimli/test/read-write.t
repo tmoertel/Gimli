@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 44;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -16,7 +16,7 @@ use RunGimli;
 for (["read",1], ["write",2]) {
     my ($op, $nargs) = @$_;
     for my $type (qw(csv tsv wsv)) {
-        evals_ok( "$op.$type()", qr/error:.*$nargs argument.*not 0/ );
+        evals_ok( "$op.$type()", qr/error:.* no value provided/ );
     }
 }
 
@@ -43,6 +43,13 @@ FILE
 1 T
 EXPECTED
 
+read_csv_evals_exact_ok( <<FILE, <<EXPECTED, "header=F" );
+T
+FILE
+  C1
+1  T
+EXPECTED
+
 read_csv_evals_exact_ok( <<FILE, <<EXPECTED );
 x
 T
@@ -64,6 +71,14 @@ EXPECTED
 read_csv_evals_exact_ok( <<FILE, <<EXPECTED );
 x,y
 T,9
+FILE
+  x y
+1 T 9
+EXPECTED
+
+read_csv_evals_exact_ok( <<FILE, <<EXPECTED, "transpose=T" );
+x,T
+y,9
 FILE
   x y
 1 T 9
@@ -101,6 +116,10 @@ FILE
 
 write_csv_evals_exact_ok( "table(x=1)", <<EOF );
 x
+1
+EOF
+
+write_csv_evals_exact_ok( "table(x=1)", <<EOF, "header=F" );
 1
 EOF
 
@@ -145,6 +164,14 @@ FILE
 1 T
 EXPECTED
 
+read_wsv_evals_exact_ok( <<FILE, <<EXPECTED, "header=F" );
+T
+FILE
+  C1
+1  T
+EXPECTED
+
+
 read_wsv_evals_exact_ok( <<FILE, <<EXPECTED );
 x
 T
@@ -171,6 +198,15 @@ FILE
 1 T 9
 EXPECTED
 
+read_wsv_evals_exact_ok( <<FILE, <<EXPECTED, "transpose=T" );
+x T
+y 9
+FILE
+  x y
+1 T 9
+EXPECTED
+
+
 # non-rectangular tables are verboten
 
 read_wsv_evals_exact_ok( <<FILE, qr/error .* non-rectangular/x );
@@ -185,6 +221,10 @@ FILE
 
 write_wsv_evals_exact_ok( "table(x=1)", <<EOF );
   x
+1 1
+EOF
+
+write_wsv_evals_exact_ok( "table(x=1)", <<EOF, "header=F" );
 1 1
 EOF
 
@@ -313,9 +353,11 @@ sub read_tsv_evals_exact_ok {
 }
 
 sub read_file_evals_exact_ok {
-    my ($kind, $file, $expected) = @_;
+    my ($kind, $file, $expected, @extras) = @_;
     with_file($file, sub {
-        evals_exact_ok( qq[read.$kind("$_")], $expected )
+        local $" = ", ";
+        my @args = (qq("$_"), @extras);
+        evals_exact_ok( "read.$kind(@args)", $expected )
     } );
 }
 
@@ -332,9 +374,11 @@ sub write_tsv_evals_exact_ok {
 }
 
 sub write_file_evals_exact_ok {
-    my ($kind, $gimli_cmd, $expected) = @_;
+    my ($kind, $gimli_cmd, $expected, @extras) = @_;
     with_file("--write-file-exact-ok-initial-content--", sub {
-        run_gimli( qq[t <- $gimli_cmd; write.$kind(t,"$_")] );
+        local $" = ", ";
+        my @args = (qq("$_"), @extras);
+        run_gimli( "t <- $gimli_cmd; write.$kind(t,@args)" );
         is( read_file($_), $expected ) ;
     } );
 }
