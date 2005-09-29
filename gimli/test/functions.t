@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 22;
+use Test::More tests => 23;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -44,6 +44,22 @@ x <- 10;
 f()  # 2
 f()  # 3
 x    # 10
+EOF
+
+evals_ok( <<EOF, "11\n12\n3\n4" );
+mk.inc <- local do
+  x <- 1
+  func(y=x) do
+    x <<- x+1
+    func() y <<- y+1
+  end
+end;
+f <- mk.inc(10);  # make incrementer w/ seed 10
+f() # 11
+f() # 12
+f <- mk.inc();    # use default seed (now 2)
+f() # 3
+f() # 4
 EOF
 
 # error-reporting
