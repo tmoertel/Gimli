@@ -1,0 +1,67 @@
+GIMLI README                                          -*- Outline -*-
+Tom Moertel <tom@moertel.com>
+
+* How to build Gimli
+
+The following sections describe how to build Gimli from source code.
+
+** Requirements
+
+In order to build Gimli, you must have a typical Unix-style development
+environment, including the following:
+
+  - Glasgow Haskell Compiler, version 6.4 or greater
+    http://haskell.org/ghc/
+  - Perl, version 5.8 or greater
+  - make (GNU preferred)
+  - rsync
+  - Readline library
+
+For Mac OS X development, you must also have Apple's XCode installed.
+
+** Building
+
+From the root of the project directory, run the following command:
+
+    $ make
+
+If all goes well, the Gimli interactive shell will be built in the
+app subdirectory.  If something goes wrong, make sure you have a
+complete development kit.
+
+Test the shell by running the test suite:
+
+    $ make test
+
+A successful test looks something like this:
+
+    $ make test
+    prove test/*.t
+    test/01-sanity....ok
+    test/expr.........ok
+    test/inspect......ok
+    test/state........ok
+    test/table........ok
+    test/vector.......ok
+    All tests successful.
+    Files=6, Tests=153,  6 wallclock secs ...
+
+
+* Running Gimli
+
+To start Gimli, enter the following command from the project root:
+
+    $ app/gimli
+          _       _ _
+     __ _(_)_ __ | (_)    Genetics Information Manipulation Language, ...
+    / _` | | '  \| | |    Version 0.004
+    \__, |_|_|_|_|_|_|    Enter :? for help.
+    |___/
+
+    gimli>
+
+Enter the command :? for help.
+
+
+
+- END -
