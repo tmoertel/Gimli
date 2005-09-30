@@ -37,28 +37,28 @@ evals_ok( '(func(x,y=3*x) 10*x + y)(1,y=2)' , 12 );
 
 evals_ok( <<EOF, "2\n3\n10" );
 f <- local do
-    x <- 1
+    x <- 1;
     func() x <<- x+1
 end;
 x <- 10;
-f()  # 2
-f()  # 3
-x    # 10
+print(f());  # 2
+print(f());  # 3
+x            # 10
 EOF
 
 evals_ok( <<EOF, "11\n12\n3\n4" );
 mk.inc <- local do
-  x <- 1
+  x <- 1;
   function(y=x) do
-    x <<- x+1
+    x <<- x+1;
     function() y <<- y+1
   end
 end;
 f <- mk.inc(10);  # make incrementer w/ seed 10
-f()               # 11
-f()               # 12
+print(f());       # 11
+print(f());       # 12
 f <- mk.inc();    # use default seed (now 2)
-f()               # 3
+print(f());       # 3
 f()               # 4
 EOF
 

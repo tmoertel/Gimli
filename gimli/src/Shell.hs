@@ -42,7 +42,7 @@ initialState term = do
     (`execStateT` s0 {stEvalState = topLevel}) . (`runContT` return) $ do
         userconf <- liftIO $ handle (\_ -> return []) $ do
             home <- getEnv "HOME"
-            liftM lines $ readFile (home ++ "/" ++ dotGimli)
+            liftM (:[]) $ readFile (home ++ "/" ++ dotGimli)
         mapM_ eval $ defaults ++ userconf
   where
     defaults =
@@ -124,7 +124,7 @@ eval cmd = do
             modify $ \st -> st { stContinue = Nothing }
             doEval expr >>= either showError ppResult
   where
-    quiet = not (null cmd) && last cmd' == ';'
+    quiet = not (null cmd') && last cmd' == ';'
     cmd'  = reverse (dropWhile isSpace (reverse cmd))
     cmd'' = if quiet then init cmd' else cmd'
     noContinue = modify $ \st -> st { stContinue = Nothing }
@@ -230,7 +230,7 @@ getCommand = do
     liftIO $
         handle (\_ -> return Nothing) $
         if term then prompt (isJust contCmd)
-        else getLine >>= return . Just
+        else getContents >>= return . Just
 
 prompt continue =
     LE.readline ("gimli" ++ if continue then "+ " else "> ") >>=
