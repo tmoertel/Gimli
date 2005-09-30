@@ -9,7 +9,11 @@ dist_dir = dist
 hsfiles := $(wildcard $(src_dir)/*.hs $(src_dir)/*/*.hs)
 version := $(shell perl -lne'print $$1 if /([0-9.]+)/' $(src_dir)/Version.hs)
 
+platform := $(shell (uname -i; uname -o) | tr A-Z a-z | tr -cs a-z0-9 - | \
+	      sed -e 's/^-//' -e 's/-$$//')
+
 dist_pkg = $(dist_dir)/$(package_name)-$(version)
+bin_pkg  = $(dist_pkg)-bin-$(platform)
 
 gimli_packages = -package readline
 
@@ -65,5 +69,14 @@ clean:
 dist:
 	rm -rf $(dist_pkg)
 	mkdir -p $(dist_pkg)
-	rsync -aRC `cat MANIFEST` $(dist_pkg)
-	tar zcf $(dist_pkg).tar.gz -C $(dist_dir) $(package_name)-$(version)
+	rsync -avRC `cat MANIFEST` $(dist_pkg)
+	tar zcf $(dist_pkg).tar.gz -C $(dist_dir) $(notdir $(dist_pkg))
+	rm -rf $(dist_pkg)
+
+.PHONY: bindist
+bindist: all
+	rm -rf $(bin_pkg)
+	mkdir -p $(bin_pkg)
+	rsync -avRC `cat MANIFEST | grep -v '^$(src_dir)/'` app $(bin_pkg)
+	tar zcf $(bin_pkg).tar.gz -C $(dist_dir) $(notdir $(bin_pkg))
+	rm -rf $(bin_pkg)
