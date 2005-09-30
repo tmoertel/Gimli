@@ -33,7 +33,7 @@ evals_ok( 'glob()', 'NULL' );
 
 # inspect
 
-evals_ok( 'inspect(1)', "1 => 1\nNULL" );
+evals_ok( 'inspect(1)', "1 => 1\n1" );
 
 
 # length
