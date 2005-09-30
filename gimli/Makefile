@@ -12,7 +12,7 @@ vfile    = $(src_dir)/Version.hs
 version := $(shell [ -e $(vfile) ] && \
              perl -lne'print $$1 if /([0-9.]+)/' $(vfile))
 
-platform := $(shell (uname -i; uname -o) | tr A-Z a-z | tr -cs a-z0-9 - | \
+platform := $(shell (uname -m; uname -s) | tr A-Z a-z | tr -cs a-z0-9 - | \
 	      sed -e 's/^-//' -e 's/-$$//')
 
 dist_pkg = $(dist_dir)/$(package_name)-$(version)
