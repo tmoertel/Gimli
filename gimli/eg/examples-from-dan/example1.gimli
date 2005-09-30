@@ -59,7 +59,7 @@ extend.ped <- function(ped, geno) do
   end
 end;
 
-print( extend.ped(ped.in, file1) );
+print( ped.in %extend.ped% file1 );
 
 # Output:
 #   ID ped per geno.m1 geno.m2
@@ -78,7 +78,13 @@ file3t <- read.wsv("file3.wsv", transpose=T);
 # m1     1/1 1/2
 # m2     2/2 2/1
 
-# This helper does the same as the earlier extend.ped but is works
+# file3t as read and transposed by Gimli:
+#   marker    m1    m2
+# 1      1 "1/1" "2/2"
+# 2      2 "1/2" "2/1"
+
+
+# This helper does the same as the earlier extend.ped but works
 # on tranposed data.
 
 extend.t.ped <- function(ped, genoT) do
@@ -109,15 +115,16 @@ print( extend.t.ped(ped.in, file3t) );
 extend.ped.by.many.files <- function(ped, pathnames) do
   for f in pathnames do
     g <- read.wsv(f);
-    ped <- extend.ped(ped, g)
+    ped <- ped %extend.ped% g
   end
 end;
 
 # The glob() function can be used to find files whose pathnames match
-# the given shell "globbing" pattern(s).  Here we use it to find the
-# marker-specific genotype files (of which I have two).
+# the given shell "file globbing" pattern(s).  Here we use it to find
+# the marker-specific genotype files (of which I have two).
 
 marker.files <- glob("mfile*.wsv");
+# Glob matches: ["./mfile1.wsv","./mfile2.wsv"]
 
 # File "mfile1.wsv" contents:
 # ID geno marker
@@ -150,8 +157,8 @@ file1NA <- read.wsv("file1NA.wsv");
 # ID geno marker
 # 1  1/1  m1
 # 1  2/2  m2
-# 3  1/2  m1    <--- note that this file has ID 3 but no ID 2
-# 3  2/1  m2
+# 3  1/2  m1    <--- note that this file has IDs 1 & 3 but no 2
+# 3  2/1  m2         and that ped.in has IDs 1 & 2 but no 3.
 
 print( extend.ped(ped.in, file1NA) );
 
@@ -175,6 +182,7 @@ file1NAdup <- read.wsv("file1NAdup.wsv");
 # 3  1/2  m2    <--- oops, there are two (ID=3,marker=m2) pairs
 # 3  2/1  m2
 
+# if our non-unique-ID check works, the following should fail
 print( extend.ped(ped.in, file1NAdup) )
 
 # Output:
@@ -193,7 +201,7 @@ print( extend.ped(ped.in, file1NAdup) )
 
 
 
-# The final semicolon tells Gimli not to print the final result, which
-# would just duplicate the output of the previous print expression
+# The ultimate semicolon tells Gimli not to print the final result, which
+# would just duplicate the output of the previous print expression.
 
 ;
