@@ -71,7 +71,6 @@ factor =
     <|> varExpr
     <|> ifThenElseExpr
     <|> forExpr
-    <|> blockExpr
     <|> localExpr
     <?> "simple expression"
 
@@ -82,12 +81,12 @@ tspec = do
     (liftM TCol anypair) <|> (liftM TSplice expr)
 
 localExpr =
-    reserved "local" >> liftM ELocal expr
+    reserved "local" >> liftM ELocal blockOrExpr
 
 functionExpr = do
     reserved "function" <|> reserved "func"
     args <- parens formalArgs
-    body <- expr
+    body <- blockOrExpr
     return $ EFunc args body
 
 formalArgs = do
@@ -133,23 +132,23 @@ ifThenElseExpr = do
          <|> (reserved "unless" >> return EUnless)
     test <- expr
     reserved "then"
-    trueExpr <- expr
+    trueExpr <- blockOrExpr
     maybeFalseExpr <- option Nothing $ do
         reserved "else"
-        expr >>= return . Just
+        blockOrExpr >>= return . Just
     return (kind test trueExpr maybeFalseExpr)
 
 forExpr = do
-    var <- forVarInFrag
+    reserved "for"
+    var <- identifier
+    symbol "in"
     collection <- expr
     prog <- blockExpr
     return $ EFor var collection prog
 
-forVarInFrag = do
-    reserved "for"
-    var <- identifier
-    symbol "in"
-    return var
+blockOrExpr =
+        blockExpr
+    <|> expr
 
 blockExpr = do
         between (reserved "do") (reserved "end") blockContents
