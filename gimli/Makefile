@@ -1,4 +1,5 @@
 # GIMLI Makefile
+# Tom Moertel <tom@moertel.com>
 
 package_name = gimli
 
@@ -7,7 +8,9 @@ src_dir  = src
 dist_dir = dist
 
 hsfiles := $(wildcard $(src_dir)/*.hs $(src_dir)/*/*.hs)
-version := $(shell perl -lne'print $$1 if /([0-9.]+)/' $(src_dir)/Version.hs)
+vfile    = $(src_dir)/Version.hs
+version := $(shell [ -e $(vfile) ] && \
+             perl -lne'print $$1 if /([0-9.]+)/' $(vfile))
 
 platform := $(shell (uname -i; uname -o) | tr A-Z a-z | tr -cs a-z0-9 - | \
 	      sed -e 's/^-//' -e 's/-$$//')
@@ -77,6 +80,7 @@ dist:
 bindist: all
 	rm -rf $(bin_pkg)
 	mkdir -p $(bin_pkg)
-	rsync -avRC `cat MANIFEST | grep -v '^$(src_dir)/'` app $(bin_pkg)
+	rsync -avRC `cat MANIFEST | grep -v '^$(src_dir)/'` \
+	    app $(vfile) $(bin_pkg)
 	tar zcf $(bin_pkg).tar.gz -C $(dist_dir) $(notdir $(bin_pkg))
 	rm -rf $(bin_pkg)
