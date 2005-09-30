@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 40;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -65,6 +65,12 @@ evals_ok( 'match("","","","")'           , qr/error:.* arguments/ );
 evals_ok( 'names(table(x=1))', '"x"' );
 evals_ok( 'names(table(x=1,y=2))', '["x","y"]' );
 evals_ok( 'names(NULL)', qr/error:.* not a table/ );
+
+
+# print
+
+evals_ok( 'print(1)'    , "1\n1" );
+evals_ok( 'print("1")'  , qq("1"\n"1") );
 
 
 # sort

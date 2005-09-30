@@ -22,7 +22,7 @@ import PPrint
 import Utils
 import Glob
 
-
+import Debug.Trace
 
 -- ============================================================================
 -- Type for expressing Gimli-evaluatable actions
@@ -657,6 +657,7 @@ doPrim' (prim@Prim { primName=name }) args givenArgs =
     "length"    -> argsFlatten primLength
     "match"     -> primMatch name args
     "names"     -> args1 primNames
+    "print"     -> primPrint args
     "read.csv"  -> argsR primReadCsv
     "read.tsv"  -> argsR primReadTsv
     "read.wsv"  -> argsR primReadWsv
@@ -715,12 +716,20 @@ primIn nm velems vset = do
     return . mkVectorValue $ map (SLog . (`Set.member` set)) es
 
 primInspect args = do
-    mapM_ inspect args
-    return VNull
+    foldM (\_ expr -> inspect expr) VNull args
   where
-    inspect expr =
-        eval expr >>=
-        liftIO . putStrLn . ((pp expr ++ " => ") ++) . pp
+    inspect expr = do
+        val <- eval expr
+        liftIO . putStrLn . ((pp expr ++ " => ") ++) . pp $ val
+        return val
+
+primPrint args = do
+    foldM (\_ expr -> pr expr) VNull args
+  where
+    pr expr = do
+        val <- eval expr
+        liftIO . putStrLn . pp $ val
+        return val
 
 primIsNa nm arg = do
     argVal <- eval arg
