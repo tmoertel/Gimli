@@ -85,7 +85,7 @@ file3t <- read.wsv("file3.wsv", transpose=T);
 
 
 # This helper does the same as the earlier extend.ped but works
-# on tranposed data.
+# on transposed data.
 
 extend.t.ped <- function(ped, genoT) do
   ms <- names(genoT);  # get column names as vector
@@ -153,7 +153,7 @@ print( extend.ped.by.many.files(ped.in, marker.files) );
 
 file1NA <- read.wsv("file1NA.wsv");
 
-# File "file1NA.wsv" conents:
+# File "file1NA.wsv" contents:
 # ID geno marker
 # 1  1/1  m1
 # 1  2/2  m2
