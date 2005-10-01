@@ -80,8 +80,7 @@ instance Show Expr where
     showsPrec _ (EFor s e1 e2)      = ss "for " . ss s . ss " in "
                                     . sParens e1 . ss " " . shows e2
 
-    showsPrec _ (EBlock es)         = ss "do " . showParen True (semijoin es)
-                                    . ss " end"
+    showsPrec _ (EBlock es)         = ss "do " . semijoin es . ss " end"
 
     showsPrec _ (ELocal e)          = ss "local " . shows e
 
