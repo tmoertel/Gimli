@@ -666,6 +666,7 @@ doPrim' (prim@Prim { primName=name }) args givenArgs =
     "write.tsv" -> argsW primWriteTsv
     "write.wsv" -> argsW primWriteWsv
     "uniq"      -> argsFlatten primUniq
+    "var"       -> args1 primVar
   where
     args1 f = case args of
         [x] -> f name x
@@ -809,3 +810,8 @@ primUniq nm xs = do
     return . mkVectorValue . concat . snd $ mapAccumL f Set.empty xs
   where
     f set x = (Set.insert x set, if Set.member x set then [] else [x])
+
+primVar nm eVarName = do
+    during nm $ do
+        var <- during "argument" (evalString eVarName)
+        getBindingValue var

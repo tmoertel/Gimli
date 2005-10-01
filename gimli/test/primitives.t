@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 40;
+use Test::More tests => 43;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -86,3 +86,11 @@ evals_ok( 'uniq(1)'          , '1' );
 evals_ok( 'uniq(2,1,2,1)'    , '[2,1]' );
 evals_ok( 'uniq([2,1],3,2)'  , '[2,1,3]' );
 evals_ok( 'uniq("T",T)'      , '"T"' );
+
+
+# var
+
+evals_ok( 'x <- 1; var("x")'         , 1 );
+evals_ok( 'x <- 1; y <- "x"; var(y)' , 1 );
+evals_ok( 'var("x")'                 , qr/error:.* not found/ );
+
