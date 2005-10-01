@@ -5,7 +5,7 @@
 # 2005-09-30
 #
 # This is valid Gimli file that you can execute:
-# ../../app/gimli < examples1.gimli
+# ../../app/gimli < examples1.giml
 #
 ###############################################################################
 
@@ -45,17 +45,18 @@ end;
 # Create a helper function to full-join two tables and then merge
 # their IDs, verifying ID uniqueness for each table first.
 
-full.join.and.merge.ids <- function(l,r) do
-  (ucheck(l) === ucheck(r)) $ (+ID = ID unless ID.1; -ID.1)
+full.join.and.merge.ids <- function(l, r, id="ID") do
+  id.1 <- id ++ ".1";
+  (ucheck(l) === ucheck(r)) $ (+(id) = var(id) unless var(id.1); -(id.1))
 end;
 
 # This helper will extend a pedigree structure with the given
 # genotype information, placing each marker into its own column.
 
-extend.ped <- function(ped, geno) do
-  for m in uniq(geno$marker) do                   # for each unique marker ...
-    g <- geno[marker==m]$(ID, "geno."++m = geno); # extract markers matching m
-    ped <- full.join.and.merge.ids(ped, g)        # & join them into ped table
+extend.ped <- function(ped, geno, id="ID") do
+  for m in uniq(geno$marker) do                     # for each unique marker m
+    g <- geno[marker==m]$((id), "geno."++m = geno); # extract matches for m
+    ped <- full.join.and.merge.ids(ped, g, id)      # & join into ped table
   end
 end;
 
@@ -87,12 +88,11 @@ file3t <- read.wsv("file3.wsv", transpose=T);
 # This helper does the same as the earlier extend.ped but works
 # on transposed data.
 
-extend.t.ped <- function(ped, genoT) do
+extend.t.ped <- function(ped, genoT, id="ID", marker.id="marker") do
   ms <- names(genoT);  # get column names as vector
-  ids <- genoT$marker; # get IDs as vector, too
-  for m in ms[ms != "marker"] do
-      t <- table(ID = ids, "geno."++m = genoT$((m))$1);
-      ped <- full.join.and.merge.ids(ped, t)
+  for m in ms[ms != marker.id] do
+      g <- genoT$((id) = var(marker.id), "geno." ++ m = var(m));
+      ped <- full.join.and.merge.ids(ped, g, id)
   end
 end;
 
