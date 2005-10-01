@@ -304,7 +304,7 @@ computeFnBindings formalArgs givenArgs = do
         []    -> throwError $ "no formal argument matches \"" ++nm++ "\""
         [fnm] -> return (fnm, e)
         fnms  -> throwError $ "argument \"" ++ nm ++ "\" is ambiguous; "
-                          ++ "matches " ++ unwords (map show fnms)
+                          ++ "matches " ++ show fnms
       where
         (_, greater) = Map.split nm formalRest
         (matches,_)  = Map.split (nm++"~") greater
