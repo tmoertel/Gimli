@@ -17,7 +17,7 @@ import Data.Maybe (mapMaybe, listToMaybe)
 import System.Directory (getDirectoryContents)
 import Text.ParserCombinators.ReadP
 
-glob :: String -> IO [String]
+glob :: MonadIO m => String -> m [String]
 glob pat =
     runListT $ foldM search root restDirs
   where
@@ -25,11 +25,11 @@ glob pat =
         "":ds -> ("/", ds)
         ds    -> (".", ds)
 
-search :: String -> String -> ListT IO String
+search :: MonadIO m => String -> String -> ListT m String
 search p d = do
 --  liftIO $ putStrLn $ "getDirectoryContents " ++ p ++ " >>= match " ++ d
-    fs <- liftIO $ Ex.handle (const (return [])) (getDirectoryContents p) >>=
-        return . sort . mapMaybe (match d)
+    fs <- liftIO $ Ex.handle (const (return [])) $
+          getDirectoryContents p >>= return . sort . mapMaybe (match d)
     ListT . return $ map ((p' ++ "/") ++) fs
       where
         p' = if p == "/" then "" else p
@@ -74,4 +74,5 @@ match p s     =
 -- Break a string upon slashes (like 'lines' for slashes instead of newlines)
 
 dirs :: String -> [String]
-dirs s = lines . map (\c -> if c == '/' then '\n' else c) $ s
+dirs =
+    lines . map (\c -> if c == '/' then '\n' else c)
