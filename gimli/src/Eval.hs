@@ -79,14 +79,10 @@ eval (EVector es) = do
     return . VVector . mkVector $ concatMap vlist vecs
 
 eval (EBind lvalue ev)
-    | EVar ident <- lvalue = evalAndBind ident ev
-    | otherwise            = throwError $
-                             "cannot bind to non-lvalue: " ++ pp lvalue
+    = doBind "<-" evalAndBind lvalue ev
 
 eval (EBindOver lvalue ev)
-    | EVar ident <- lvalue = evalAndBindOver ident ev
-    | otherwise            = throwError $
-                             "cannot bind to non-lvalue: " ++ pp lvalue
+    = doBind "<<-" evalAndBindOver lvalue ev
 
 eval (ELocal e) = do
     enterNewScope (eval e)
@@ -173,6 +169,14 @@ getBindingValue ident = do
         Just cl -> return (clVal cl)
         _       -> throwError $ "variable \"" ++ ident ++ "\" not found"
 
+
+-- binding helper
+
+doBind nm binder lvalue ev
+    | EVar ident <- lvalue = binder ident ev
+    | otherwise            = during nm $ do
+                             ident <- evalString lvalue
+                             binder ident ev
 
 -- error-reporting helpers
 
