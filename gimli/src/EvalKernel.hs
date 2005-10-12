@@ -4,7 +4,7 @@ module EvalKernel (
     EvalCtx(..), EvalError, LogS,
     EvalG, runEval,
     getScope, enterNewScope, withinScope,
-    lookupBinding, bindVal, bindValExpr, bindOverValExpr,
+    lookupBinding, bindVal, bindValExpr, bindOverValExpr, bindIOVal,
     newTopLevel,
     clExp, clVal
 )
@@ -59,7 +59,12 @@ data EvalCtx v e = EvalCtx
                    { ctxFrames   :: FrameStack v e
                    , ctxTopLevel :: Frame v e
                    }
-type Env v e     = Map.Map Identifier (Closure v e)
+
+data BoundVal v e
+    = BoundIO (IO v)              -- ^ for speed optimizations
+    | BoundClosure (Closure v e)  -- ^ for common value bindings
+
+type Env v e     = Map.Map Identifier (BoundVal v e)
 
 type FrameStack v e  = [Frame v e]
 data Frame v e   = Frame
@@ -123,13 +128,18 @@ bindVal ident val =
 
 bindValExpr :: Identifier -> v -> Maybe e -> EvalG r v e v
 bindValExpr ident val valExpr = do
-    modifyLocalEnv $ Map.insert ident (val, valExpr)
+    modifyLocalEnv $ Map.insert ident (BoundClosure (val, valExpr))
     return val
+
+bindIOVal :: Identifier -> IO v -> EvalG r v e (IO v)
+bindIOVal ident ioval = do
+    modifyLocalEnv $ Map.insert ident (BoundIO ioval)
+    return ioval
 
 bindOverValExpr :: Identifier -> v -> Maybe e -> EvalG r v e v
 bindOverValExpr ident val valExpr = do
     frame <- findBindingFrame ident
-    Map.insert ident (val, valExpr) `modifyFrameEnv` frame
+    Map.insert ident (BoundClosure (val, valExpr)) `modifyFrameEnv` frame
     return val
 
 lookupBinding :: Identifier -> EvalG r v e (Maybe (Closure v e))
@@ -147,7 +157,10 @@ lookupBindingAndFrame s = do
     search esc s frame = do
        env <- liftIO $ readIORef (frameEnvRef frame)
        case Map.lookup s env of
-           Just cl -> esc $ Just (frame, cl)
+           Just (BoundIO io) -> do
+               val <- liftIO io
+               esc $ Just (frame, (val, Nothing))
+           Just (BoundClosure cl) -> esc $ Just (frame, cl)
            _       -> return Nothing
 
 

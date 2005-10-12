@@ -515,16 +515,15 @@ evalPS psc = return [psc]
 
 evalRows :: Table -> [Expr] -> Eval r [[Value]]
 evalRows table colExps = do
-    zipWithM projectRow [1..] (trows table)
+    rowRef <- liftIO . newIORef $ mkRowArray (repeat undefined)
+    let getVal n = liftM (\a -> mkVectorValue [a!n]) (readIORef rowRef)
+    zipWithM (\c n -> bindIOVal c (getVal n)) ("ROW.ID" : tcnames table) [0..]
+    zipWithM (projectRow rowRef) [1..] (trows table)
   where
-    projectRow rid row = do
-        bindCols row
-        bindScalar "ROW.ID" (SNum (fromIntegral rid))
+    mkRowArray xs = listArray (0, length (tcnames table)) xs
+    projectRow rowRef rid row = do
+        liftIO . writeIORef rowRef $ mkRowArray (SNum (fromIntegral rid) : row)
         mapM eval colExps
-    bindCols = zipWithM bindScalar (tcnames table)
-
-bindScalar ident x =
-    bindVal ident (mkVectorValue [x])
 
 removeStars =
     filter (not . isStar)
