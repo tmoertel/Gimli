@@ -78,7 +78,7 @@ instance Show Expr where
                                     . ss " then " . shows t
                                     . maybe id  (\x -> ss " else " . shows x) f
     showsPrec _ (EFor s e1 e2)      = ss "for " . ss s . ss " in "
-                                    . sParens e1 . ss " " . shows e2
+                                    . shows e1 . ss " { " . shows e2 . ss " }"
 
     showsPrec _ (EBlock es)         = ss "do " . semijoin es . ss " end"
 
