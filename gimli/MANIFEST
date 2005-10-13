@@ -2,7 +2,7 @@ MANIFEST
 Makefile
 README
 TODO
-eg/examples-from-dan/example1.gimli
+eg/examples-from-dan/example1.giml
 eg/examples-from-dan/file1.wsv
 eg/examples-from-dan/file1NA.wsv
 eg/examples-from-dan/file1NAdup.wsv
