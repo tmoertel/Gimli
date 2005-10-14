@@ -35,6 +35,8 @@ evals_exact_ok( "list(NULL)", <<'EOF' );
 [1] => NULL
 EOF
 
+evals_same_ok( "list()" );
+
 
 #==============================================================================
 # list indexing
