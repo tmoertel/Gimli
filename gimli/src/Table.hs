@@ -16,6 +16,7 @@ import Data.Maybe
 
 import CoreTypes
 import GList
+import HasNames
 import PPrint
 import Utils (uniqify, cross)
 import Scalar
@@ -74,10 +75,6 @@ fillRight ss =
 tableColumnIndexCheck (T gl) n  = glistIndexCheck gl n
 tableColumnLookupIndex (T gl) s = glistLookupIndex gl s
 
-showRange (l,h) = "[" ++ show l ++ "," ++ show h ++ "]"
-
-tableColumnLookupIndex table s =
-    (throwError msg `maybe` return) $
-    Map.lookup s (tlookup table)
-  where
-    msg = "column name \"" ++ s ++ "\" does not exist"
+instance HasNames Table where
+    getNames (T gl)    = getNames gl
+    setNames (T gl) ns = liftM T (setNames gl ns)

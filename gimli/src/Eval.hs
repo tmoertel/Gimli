@@ -9,7 +9,8 @@ import Control.Monad.Error
 import Data.Array
 import Data.Either
 import Data.IORef
-import Data.List (group, intersperse, mapAccumL, sort, transpose, (\\))
+import Data.List ( group, intersperse, mapAccumL, sort, transpose, (\\)
+                 , genericLength )
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe
@@ -17,6 +18,7 @@ import Text.Regex
 
 import EvalKernel
 import Expr
+import HasNames
 import LoadData
 import PPrint
 import Utils
@@ -111,8 +113,8 @@ eval (EUnless etest etrue maybeEfalse) = do
     doIfBody etest etrue maybeEfalse not
 
 eval (EFor var ecoll eblk) = do
-    coll <- arg1of nm (evalVectorNull ecoll)
-    during nm $ foldM bindAndEval VNull [mkVectorValue [x] | x <- vlist coll]
+    coll <- arg1of nm (evalCollection ecoll)
+    during nm $ foldM bindAndEval VNull coll
   where
     nm = "for " ++ var ++ " in ..."
     bindAndEval :: Value -> Value -> Eval r Value
@@ -120,13 +122,21 @@ eval (EFor var ecoll eblk) = do
         bindVal var val
         eval eblk
 
+eval (EList args) =
+    during "list constructor" $ do
+    vals  <- mapM (eval . gaExpr) args
+    return . VList . mkGList $
+        zipWith (\a v -> (gaName a, v)) args vals
+
 eval (ESelect etarget eselect) =
     during "table selection" $ do
     target <- eval etarget
     case target of
-        VVector vec  -> eval eselect >>= return . VVector . selectVector vec
+        VVector vec  -> eval eselect >>= liftM VVector . selectVector vec
+        VList gl     -> eval eselect >>= selectList gl
         VTable table -> select table eselect
-        _ -> throwError $ "selection applies only to tables and vectors"
+        _ -> throwError $
+             "selection applies only to vectors, lists, and tables"
 
 eval (EJoin joinType eltarg ertarg) = do
     ltable <- arg1of nm (evalTable eltarg)
@@ -138,8 +148,12 @@ eval (EJoin joinType eltarg ertarg) = do
         throwError $ loc ++ " argument of join must be a table"
 
 eval (EProject etarget pspec) = do
-    table <- arg1of "$" (evalTable etarget)
-    during "project" $ project table pspec
+    target <- arg1of "$" $ eval etarget
+    case target of
+        VList gl     -> during "projection on list" $ projectList gl pspec
+        VTable table -> during "projection on table" $ project table pspec
+        _            -> throwError $
+                        "projection applies only to lists and tables"
 
 eval (ETable tspecs) =
     during nm $ do
@@ -213,7 +227,13 @@ evalTable e      = eval e >>= asTable
 evalBool e       = eval e >>= asBool
 evalVector e     = eval e >>= asVector
 evalVectorNull e = eval e >>= asVectorNull
-
+evalCollection e = do
+    v <- eval e
+    case v of
+        VNull       -> return []
+        VVector vec -> return [mkVectorValue [x] | x <- vlist vec]
+        VList gl    -> return $ elems (glvals gl)
+        x           -> throwError $ "expecting vector or list"
 
 -- binding helper
 
@@ -317,36 +337,93 @@ computeFnBindings formalArgs givenArgs = do
 
 
 -- ============================================================================
--- vector operations
+-- vector/list selection
 -- ============================================================================
 
 -- select elements _es_ from vector _vec_:
 
 selectVector (V tvtype _ txs) (VVector (V VTNum _ sxs)) =
-    V tvtype (length xs) xs
+    return $ V tvtype (length xs) xs
   where
-    xs   = map (pull txs') sxs'
+    xs   = map pull (selectIndices [1..length txs] sxs)
     txs' = txs ++ repeat SNa
-    sxs' = if sxs == [ sx | sx@(SNum n) <- sxs, n < 0 ]
-           then [ SNum n
-                  | n <- map fromIntegral [1..length txs]
-                  , negate n `notElem` nsxs ]
-           else sxs
-    nsxs = [ n | SNum n <- sxs ]
+    pull (SNum n)
+        | n > 0   = txs' !! (round n - 1)
+    pull _        = SNa
+
 selectVector (V tvtype _ txs) (VVector (V VTLog _ sxs)) =
-    V tvtype (length xs) xs
+    return $ V tvtype (length xs) xs
   where
-    xs   = catMaybes $ zipWith takeLogical txs sxs
-selectVector _ _ = error "vector-selection criteria must be a vector"
+    xs   = catMaybes $ zipWith (takeLogical SNa) txs sxs
+
+selectVector _ _ =
+    throwError "vector-selection criteria must be a vector"
 
 
-pull xs (SNum n) = xs !! (round n - 1)
-pull _  _        = SNa
+-- select elements _es_ from list _gl_:
 
-takeLogical tx (SLog True) = Just tx
-takeLogical _  SNa         = Just SNa
-takeLogical _  _           = Nothing
+selectList gl (VVector (V VTNum _ sxs)) =
+    liftM (VList . mkGListNamed) $ mapM pull (selectIndices (range bnds) sxs)
+  where
+    vals   = glvals gl
+    names  = glnames gl
+    bnds   = bounds vals
+    pull (SNum i) = do
+             let i' = round i
+             when (not $ inRange bnds i') $
+                 throwError $ "list index " ++ show i ++ " is out of range "
+                              ++ show bnds
+             return (names ! i', vals ! i')
+    pull _ = return naListElem
 
+selectList gl (VVector (V VTStr _ sxs)) =
+    liftM (VList . mkGListNamed) $  mapM pull sxs
+  where
+    pull (SStr s) = glistLookupIndex gl s >>= \n -> return (names!n, vals!n)
+    pull _        = return naListElem
+    (names, vals) = pair (glnames, glvals) gl
+
+selectList gl (VVector (V VTLog _ sxs)) =
+    return . VList . mkGListNamed . catMaybes $
+        zipWith (takeLogical naListElem) (glpairs gl) (cycle sxs)
+
+selectList _ _ =
+    throwError "list-selection criteria must be a vector"
+
+
+naListElem = ("", mkVectorValue [SNa])
+
+-- helpers
+
+selectIndices indices sxs =
+    case [ sx | sx@(SNum n) <- sxs, n < 0 ] of
+    _:_ -> [ SNum n
+             | n <- map fromIntegral indices
+             , not (negate n `Set.member` nsxs) ]
+    _   -> sxs
+  where
+    nsxs = Set.fromList [ n | SNum n <- sxs ]
+
+
+takeLogical _  tx (SLog True) = Just tx
+takeLogical na _  SNa         = Just na
+takeLogical _  _  _           = Nothing
+
+
+-- ============================================================================
+-- list projection
+-- ============================================================================
+
+projectList gl pspec =
+    liftM (head . elems . glvals . unVList) $ case pspec of
+        PSVectorName nm ->
+            selectList gl (VVector (V VTStr 1 [SStr nm]))
+        PSVectorNum  i  ->
+            selectList gl (VVector (V VTNum 1 [SNum $ fromIntegral i]))
+        _ ->
+            throwError "lists do not support complex projection"
+  where
+    unVList (VList gl) = gl
 
 -- ============================================================================
 -- table operations
@@ -743,7 +820,7 @@ primIsNa nm arg = do
     naVecVal = VVector naVector
 
 primLength _ xs = do
-    return $ mkVectorValue [SNum (fromIntegral $ length xs)]
+    return $ mkVectorValue [SNum (genericLength xs)]
 
 primMatch nm args =
     during "match" $ do
@@ -761,10 +838,15 @@ primMatch nm args =
             Just (_     , _    , _    , xs) -> svec xs
     svec xs = mkVectorValue (map SStr xs)
 
-primNames nm etable =
+primNames nm evalue =
     during "names" $ do
-    t <- evalTable etable
-    return . mkVectorValue . map SStr $ tcnames t
+    val <- eval evalue
+    names <- case val of
+        VTable t -> return $ getNames t
+        VList gl -> return $ getNames gl
+        _        -> throwError "only lists and tables have names"
+    return . mkVectorValue . map SStr $ names
+  where
 
 primReadCsv n f h tr = primReadX loadCsvTable n f h tr
 primReadTsv n f h tr = primReadX loadTsvTable n f h tr

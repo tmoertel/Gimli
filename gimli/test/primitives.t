@@ -64,7 +64,7 @@ evals_ok( 'match("","","","")'           , qr/error:.* arguments/ );
 
 evals_ok( 'names(table(x=1))', '"x"' );
 evals_ok( 'names(table(x=1,y=2))', '["x","y"]' );
-evals_ok( 'names(NULL)', qr/error:.* not a table/ );
+evals_ok( 'names(NULL)', qr/error:/ );
 
 
 # print

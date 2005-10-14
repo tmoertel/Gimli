@@ -14,7 +14,7 @@ module Expr (
     Value(..),
         vIsVector, vIsTable,
         toScalar,
-        asVector, asVectorNull, asNum, asTable, asString, asBool,
+        asVector, asVectorNull, asNum, asTable, asString, asBool, asGList,
         mkVectorValue,
         concatVals,
         test,
@@ -24,6 +24,7 @@ module Expr (
     module CoreTypes,
     module Scalar,
     module Vector,
+    module GList,
     module Table,
 )
 where
@@ -34,6 +35,7 @@ import qualified Data.Map as Map
 
 import CoreTypes
 import EvalKernel (EvalCtx)
+import GList
 import PPrint
 import Scalar
 import Table
@@ -55,6 +57,7 @@ data Expr
     | EFunc ArgList Expr
     | EUnless Expr Expr (Maybe Expr)
     | EJoin !JoinOp Expr Expr
+    | EList [GivenArg]
     | ELocal Expr
     | EProject Expr !PSpec
     | ESelect Expr Expr
@@ -87,6 +90,9 @@ instance Show Expr where
     showsPrec _ (ETable tspecs)     = ss "table" . showParen True tspecs'
       where
         tspecs' = commajoin tspecs
+
+    showsPrec p (EList args)        = ss "list"
+                                    . showParen True (commajoin args)
 
     showsPrec _ (EFunc args body)   = ss "func" . shows args . ss " "
                                     . shows body
@@ -311,6 +317,7 @@ instance Show GivenArg where
 data Value
   = VVector Vector
   | VTable Table
+  | VList (GList Value)
   | VPrim !Primitive
   | VNull
   | VFunc !ArgList !Expr (EvalCtx Value Expr)
@@ -325,16 +332,19 @@ instance Ord (EvalCtx Value Expr) where
 instance Show Value where
     showsPrec _ (VVector v)       = shows v
     showsPrec _ (VTable t)        = shows t
+    showsPrec _ (VList gl)        = shows gl
     showsPrec _  VNull            = showString "NULL"
     showsPrec _ (VFunc args body _)
                                   = ss "func" . shows args . ss " "
                                   . shows body
     showsPrec _ (VPrim prim)      = ss (primName prim)
 
+
 instance PPrint Value where
     toDoc (VVector v) = toDoc v
     toDoc VNull       = text "NULL"
     toDoc (VTable t)  = toDoc t
+    toDoc (VList gl)  = toDoc gl
     toDoc x           = text (show x)
 
 vIsVector (VVector _) = True
@@ -359,6 +369,10 @@ asNum v = asVector v >>= vecNum
 asTable :: Monad m => Value -> m Table
 asTable (VTable t) = return t
 asTable _          = fail "not a table"
+
+asGList :: Monad m => Value -> m (GList Value)
+asGList (VList gl) = return gl
+asGList _          = fail "not a list"
 
 asString :: Monad m => Value -> m String
 asString v = asVector v >>= vecStr

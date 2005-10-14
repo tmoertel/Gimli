@@ -66,6 +66,7 @@ factor =
         nullExpr
     <|> parens expr
     <|> tableExpr
+    <|> listExpr
     <|> functionExpr
     <|> vectorExpr
     <|> varExpr
@@ -79,6 +80,9 @@ tableExpr =
 
 tspec = do
     (liftM TCol anypair) <|> (liftM TSplice expr)
+
+listExpr =
+    reserved "list" >> parens (commaSep givenArg) >>= return . EList
 
 localExpr =
     reserved "local" >> liftM ELocal blockOrExpr
