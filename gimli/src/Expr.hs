@@ -309,8 +309,8 @@ instance Show GivenArg where
 
 
 data Value
-  = VVector !Vector
-  | VTable !Table
+  = VVector Vector
+  | VTable Table
   | VPrim !Primitive
   | VNull
   | VFunc !ArgList !Expr (EvalCtx Value Expr)

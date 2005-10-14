@@ -57,12 +57,12 @@ evals_ok( "$t; x\$3", "[T,F,T]" );
 evals_ok( "$t; x\$0", qr/out of range/ );
 evals_ok( "$t; x\$4", qr/out of range/ );
 
-# by column name
+# by index name
 
 evals_ok( "$t; x\$x", "[1,2,3]" );
 evals_ok( "$t; x\$y", "[11,12,13]" );
 evals_ok( "$t; x\$z", "[T,F,T]" );
-evals_ok( "$t; x\$foo", qr/column name .* does not exist/ );
+evals_ok( "$t; x\$foo", qr/index name .* does not exist/ );
 
 
 #==============================================================================
@@ -73,12 +73,12 @@ evals_ok( "$t; y <- 4; x\$(y=3); y", 4 );
 evals_ok( "$t; y <- 4; x\$(y=3,z=nosuchcolumn); y",
           qr/error:.*variable.*not found/ );
 
-# check for non-existent column names
+# check for non-existent index names
 
-evals_ok( "$t; x\$(foo)", qr/column name .* does not exist/ );
-evals_ok( "$t; x\$(-foo)", qr/column name .* does not exist/ );
-evals_ok( "$t; x\$(x,foo)", qr/column name .* does not exist/ );
-evals_ok( "$t; x\$(-x,foo)", qr/column name .* does not exist/ );
+evals_ok( "$t; x\$(foo)", qr/index name .* does not exist/ );
+evals_ok( "$t; x\$(-foo)", qr/index name .* does not exist/ );
+evals_ok( "$t; x\$(x,foo)", qr/index name .* does not exist/ );
+evals_ok( "$t; x\$(-x,foo)", qr/index name .* does not exist/ );
 
 # by column number
 

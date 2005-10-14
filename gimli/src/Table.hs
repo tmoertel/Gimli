@@ -1,8 +1,8 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 module Table (
-    Table(..),
-        mkTable,
+    Table,
+        mkTable, tcols, tvecs,
         tableColumnIndexCheck, tableColumnLookupIndex,
         trows, tcnames, tctypes
 ) where
@@ -15,8 +15,9 @@ import Data.List (intersperse, transpose)
 import Data.Maybe
 
 import CoreTypes
+import GList
 import PPrint
-import Utils (uniqify)
+import Utils (uniqify, cross)
 import Scalar
 import Vector
 
@@ -24,51 +25,40 @@ import Vector
 -- tables
 -- ============================================================================
 
-data Table = T { tcols   :: Array Int Identifier
-               , tvecs   :: Array Int Vector
-               , tlookup :: Map.Map Identifier Int
-               }
-             deriving (Show, Eq, Ord)
+newtype Table = T (GList Vector)
+    deriving (Show, Eq, Ord)
+
+tcols (T gl)   = glnames gl
+tvecs (T gl)   = glvals gl
+tlookup (T gl) = gllookup gl
 
 trows = transpose . map vlist . elems . tvecs
 
-tcnames = elems . tcols
-tctypes = map vtype . elems . tvecs
+tcnames t = elems . tcols $ t
+tctypes t = map vtype . elems . tvecs $ t
 
 
 mkTable :: [(Identifier, Vector)] -> Table
 mkTable colspecs =
-    T cols vecs lookup
-  where
-    cols   = listArray (1, len) (uniqify $ map fst colspecs)
-    vecs   = listArray (1, len) (map snd colspecs)
-    lookup = Map.fromList (zip (elems cols) [1..])
-    len    = length colspecs
-
-class ColumnIdentifier a where
-    toIndex :: Table -> a -> Int
-instance ColumnIdentifier Double where
-    toIndex _ n = round n
-instance ColumnIdentifier String where
-    toIndex (T _ _ lut) s = fromJust (Map.lookup s lut)
+    T . mkGList $ map (cross (Just, id)) colspecs
 
 instance PPrint Table where
     toDoc = vcat . map text . lines . ppTable
 
-ppTable (T ns vs _)
-    | rangeSize (bounds vs) == 0
+ppTable (T gl)
+    | rangeSize (bounds (glvals gl)) == 0
     = "(empty table)"
 
-ppTable (T ns vs _) =
+ppTable (T gl) =
     unlines $
     foldr (zipWith (++)) (repeat "") $
     intersperse (repeat " ") $
     map fillRight $
     ("" : take rowlen (map show [1..])) : zipWith (:) ordns ppvecs
   where
-    ordns  = elems ns
-    ppvecs = map (map pp . vlist) $ elems vs
-    rowlen = vlen (vs ! 1)
+    ordns  = elems (glnames gl)
+    ppvecs = map (map pp . vlist) $ elems (glvals gl)
+    rowlen = vlen (glvals gl ! 1)
 
 sndOrd a b = snd a `compare` snd b
 
@@ -81,12 +71,8 @@ fillRight ss =
     pads  = map pad lens
     pad l = replicate (fill - l) ' '
 
-tableColumnIndexCheck table n =
-    if inRange bnds n then return n else throwError msg
-  where
-    bnds = bounds (tvecs table)
-    msg  = "column index " ++ show n
-                           ++ " is out of range " ++ showRange bnds
+tableColumnIndexCheck (T gl) n  = glistIndexCheck gl n
+tableColumnLookupIndex (T gl) s = glistLookupIndex gl s
 
 showRange (l,h) = "[" ++ show l ++ "," ++ show h ++ "]"
 

@@ -431,9 +431,8 @@ sharedStrings xs ys =
 select table expr = enterNewScope $ do
     selections <- evalRows table [expr] >>= return . map head
     let vecs' = map (catMaybes . zipWith sel1 selections . vlist) vecs
-    return . VTable $
-           table { tvecs = listArray (bounds tvts) $
-                   zipWith mkVectorOfType origTypes vecs' }
+    return . VTable . mkTable . zip (tcnames table) $
+        zipWith mkVectorOfType origTypes vecs'
   where
     tvts       = tvecs table
     vecs       = elems tvts
