@@ -4,7 +4,7 @@ module Table (
     Table,
         mkTable, tcols, tvecs,
         tableColumnIndexCheck, tableColumnLookupIndex,
-        trows, tcnames, tctypes
+        trows, tcnames, tctypes, tglist
 ) where
 
 import Control.Monad
@@ -29,6 +29,7 @@ import Vector
 newtype Table = T (GList Vector)
     deriving (Show, Eq, Ord)
 
+tglist (T gl)  = gl
 tcols (T gl)   = glnames gl
 tvecs (T gl)   = glvals gl
 tlookup (T gl) = gllookup gl

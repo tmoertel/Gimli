@@ -156,24 +156,7 @@ eval (EProject etarget pspec) = do
                         "projection applies only to lists and tables"
 
 eval (ETable tspecs) =
-    during nm $ do
-    ecolspecs <- during "argument evaluation" $ do
-        toNvps . concat =<< mapM splice tspecs
-    let names = map fst ecolspecs
-    let evecs = map snd ecolspecs
-    vecs <- argof nm $ mapM evalVector evecs
-    let vlens = map vlen vecs
-    if length (group vlens) == 1
-        then return . VTable $ mkTable (zip names vecs)
-        else throwError $ "table columns must be vectors of equal length"
-  where
-    nm    = "table(...) constructor"
-    splice (TCol envp)  = return [envp]
-    splice (TSplice et) = do
-        t <- evalTable et
-        return $ zipWith mkNVP (tcnames t) (elems (tvecs t))
-    mkNVP n vec = NVP n (EVal $ VVector vec)
-
+    during "table constructor" (constructTable tspecs)
 
 -- variable-lookup helper
 
@@ -429,6 +412,33 @@ projectList gl pspec =
 -- table operations
 -- ============================================================================
 
+-- construction
+
+constructTable tspecs = do
+    ecolspecs <- during "argument evaluation" $ do
+        toNvps . concat =<< mapM splice tspecs
+    let names = map fst ecolspecs
+    let evecs = map snd ecolspecs
+    vecs <- argof nm $ mapM evalVector evecs
+    let vlens = map vlen vecs
+    if length (group vlens) == 1
+        then return . VTable $ mkTable (zip names vecs)
+        else throwError $
+             "table columns must be non-empty vectors of equal length"
+  where
+    nm    = "table(...) constructor"
+    splice (TCol envp)  = return [envp]
+    splice (TSplice e)  = do
+        val <- eval e
+        case val of
+            VTable t -> return $ zipWith mkNVP (tcnames t) (elems (tvecs t))
+            VList gl -> liftM (zipWith mkNVP (map name . elems $ glnames gl)) $
+                        mapM asVector (elems $ glvals gl)
+            _        -> throwError $
+                "can't construct table columns from (" ++ show val ++ ")"
+    mkNVP n vec = NVP n (EVal $ VVector vec)
+    name ""     = "NA"
+    name n      = n
 
 
 -- joins
@@ -729,6 +739,8 @@ doPrim prim args = doPrim' prim (map gaExpr args) args
 
 doPrim' (prim@Prim { primName=name }) args givenArgs =
     case name of
+    "as.list"   -> primAsList name args
+    "as.table"  -> primAsTable name args
     "in"        -> args2 primIn
     "glob"      -> argsFlatten primGlob
     "inspect"   -> primInspect args
@@ -789,6 +801,22 @@ doFnStylePrim body formalArgs givenArgs = do
         mapM_ (uncurry bindVal) givenValBindings
         mapM_ (uncurry bindVal) =<< toValueBindings defaultBinds
         body
+
+primAsList nm ethings =
+    during nm $ do
+    lists <- mapM ((coerceToGList =<<) . eval) ethings
+    return . VList . mkGListNamed $ concatMap glpairs lists
+
+coerceToGList val =
+    return $ case val of
+        VNull     -> mkGListVals []
+        VList  gl -> gl
+        VTable t  -> glmap VVector (tglist t)
+        VVector v -> mkGListVals . (map (\x -> mkVectorValue [x])) $ vlist v
+        x         -> mkGListVals [x]
+
+primAsTable nm ethings =
+    during nm $ constructTable (map TSplice ethings)
 
 primIn nm velems vset = do
     es  <- arg1of nm $ liftM vlist (evalVector velems)

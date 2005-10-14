@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 33;
+use Test::More tests => 34;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;

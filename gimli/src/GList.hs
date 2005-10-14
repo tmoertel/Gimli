@@ -2,8 +2,9 @@
 
 module GList (
     GList(..),
-        mkGList, mkGListNamed,
-        glpairs,
+        mkGList, mkGListNamed, mkGListVals,
+        glpairs, glbounds, gllength,
+        glmap, glmapM,
         glistIndexCheck, glistLookupIndex
 ) where
 
@@ -25,13 +26,25 @@ import Vector
 -- general lists
 -- ============================================================================
 
-data (Show a, Eq a, Ord a) => GList a
+data (Show a, Ord a) => GList a
     = GList
       { glnames   :: Array Int Identifier
       , glvals    :: Array Int a
       , gllookup  :: Map.Map Identifier Int
       }
       deriving (Show, Eq, Ord)
+
+glbounds gl = bounds (glvals gl)
+gllength gl = rangeSize (glbounds gl)
+
+glmap :: (Show a, Ord a, Show b, Ord b) => (a -> b) -> GList a -> GList b
+glmap f gl = gl { glvals = fmap f (glvals gl) }
+
+glmapM :: (Show a, Ord a, Show b, Ord b, Monad m) =>
+          (a -> m b) -> GList a -> m (GList b)
+glmapM f gl = do
+    glelems' <- mapM f . elems . glvals $ gl
+    return $ gl { glvals = listArray (1, gllength gl) glelems' }
 
 glpairs gl =
     uncurry zip . pair (elems . glnames, elems . glvals) $ gl
@@ -52,6 +65,10 @@ mkGList ispecs =
 mkGListNamed :: (Show a, Ord a) => [(Identifier, a)] -> GList a
 mkGListNamed ispecs =
     mkGList $ map (cross (Just, id)) ispecs
+
+mkGListVals :: (Show a, Ord a) => [a] -> GList a
+mkGListVals vals =
+    mkGListNamed $ map (pair (const "", id)) vals
 
 glistIndexCheck glist n =
     if inRange bnds n then return n else throwError msg
@@ -82,7 +99,11 @@ instance (Show a, Ord a) => HasNames (GList a) where
         nameCount = rangeSize (bounds (glnames gl))
 
 instance (PPrint a, Ord a) => PPrint (GList a) where
-    toDoc gl = vcat . zipWith assocDoc [1..] $ glpairs gl
+    toDoc gl
+        | 0 == rangeSize (bounds (glvals gl))
+        = text "list()"
+        | otherwise
+        = vcat . zipWith assocDoc [1..] $ glpairs gl
 
 assocDoc n (nm,val) = hang (indexDoc n nm) 2 (toDoc val)
 

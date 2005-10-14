@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 43;
+use Test::More tests => 57;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -11,6 +11,49 @@ use RunGimli;
 #==============================================================================
 # tests
 #==============================================================================
+
+# as.list
+
+evals_ok( 'as.list(NULL)',      , 'list()' );
+evals_ok( 'as.list(1)',         , '[1] => 1' );
+evals_ok( 'as.list(NULL,1)'     , '[1] => 1' );
+evals_exact_ok( 'as.list([1,3])',  <<'EOF' );
+[1] => 1
+[2] => 3
+EOF
+evals_exact_ok( 'as.list(1,"q")',  <<'EOF' );
+[1] => 1
+[2] => "q"
+EOF
+evals_ok( 'as.list(table(x=2))' , '$x => 2' );
+evals_ok( 'as.list(list(x=2))'  , '$x => 2' );
+
+
+# as.table
+
+evals_ok( 'as.table(NULL)',      , qr/error/ );
+evals_ok( 'as.table(list())',    , qr/error/ );
+evals_exact_ok( "as.table(list(x=1))", <<EOF );
+  x
+1 1
+EOF
+evals_exact_ok( "as.table(list(1,2))", <<EOF );
+  NA NA.1
+1  1    2
+EOF
+evals_exact_ok( "as.table(table(x=1))", <<EOF );
+  x
+1 1
+EOF
+evals_exact_ok( "as.table(table(x=1,y=2))", <<EOF );
+  x y
+1 1 2
+EOF
+evals_exact_ok( "as.table(table(x=1),list(y=2))", <<EOF );
+  x y
+1 1 2
+EOF
+
 
 # is.na
 

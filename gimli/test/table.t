@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 73;
+use Test::More tests => 76;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -31,6 +31,21 @@ EOF
 evals_exact_ok( "table(table(x=1),y=2)", <<EOF );
   x y
 1 1 2
+EOF
+
+evals_exact_ok( "table(list(x=1),y=2)", <<EOF );
+  x y
+1 1 2
+EOF
+
+evals_exact_ok( "table(list(1,2))", <<EOF );
+  NA NA.1
+1  1    2
+EOF
+
+evals_exact_ok( "table(table(x=1),list(z=3),y=2)", <<EOF );
+  x z y
+1 1 3 2
 EOF
 
 evals_exact_ok( "table(x=1:3,y=11:13)", <<EOF );
