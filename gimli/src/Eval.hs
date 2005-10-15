@@ -816,7 +816,9 @@ coerceToGList val =
         x         -> mkGListVals [x]
 
 primAsTable nm ethings =
-    during nm $ constructTable (map TSplice ethings)
+    during nm $ do
+    lists <- mapM ((coerceToGList =<<) . eval) ethings
+    during nm $ constructTable (map (TSplice . EVal . VList) lists)
 
 primIn nm velems vset = do
     es  <- arg1of nm $ liftM vlist (evalVector velems)

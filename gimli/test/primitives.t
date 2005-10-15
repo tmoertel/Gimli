@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 57;
+use Test::More tests => 60;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -37,7 +37,19 @@ evals_exact_ok( "as.table(list(x=1))", <<EOF );
   x
 1 1
 EOF
+evals_exact_ok( "as.table(NULL,list(),list(x=1))", <<EOF );
+  x
+1 1
+EOF
+evals_exact_ok( "as.table(1)", <<EOF );
+  NA
+1  1
+EOF
 evals_exact_ok( "as.table(list(1,2))", <<EOF );
+  NA NA.1
+1  1    2
+EOF
+evals_exact_ok( "as.table(1,2)", <<EOF );
   NA NA.1
 1  1    2
 EOF
