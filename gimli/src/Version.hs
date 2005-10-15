@@ -1,3 +1,3 @@
 module Version (version) where
 
-version = "0.011"
+version = "0.012"
