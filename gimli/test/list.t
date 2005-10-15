@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 34;
+use Test::More tests => 35;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -92,6 +92,9 @@ evals_ok( "$t; l[\"z\"]"  , '$z => 3' );
 evals_ok( "$t; l[[1,\"z\"]]", qr/name .* does not exist/ );
                               # "1" is not in list
 
+# select by NULL
+
+evals_ok( "$t; l[NULL]", 'list()' );
 
 
 #==============================================================================

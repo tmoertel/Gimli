@@ -23,7 +23,7 @@ module Expr (
 
     module CoreTypes,
     module Scalar,
-    module Vector,
+    module Vector, vectorOrNull,
     module GList,
     module Table,
 )
@@ -360,7 +360,7 @@ asVector (VVector v) = return v
 asVector _           = fail "not a vector"
 
 asVectorNull :: Monad m => Value -> m Vector
-asVectorNull VNull   = return nullVector
+asVectorNull VNull   = return emptyVector
 asVectorNull x       = asVector x
 
 asNum :: Monad m => Value -> m Double
@@ -403,7 +403,6 @@ mkVectorValue xs =
   where
     v = mkVector xs
 
-nullVector = V VTLog 0 []
 
 -- true/false test
 
@@ -421,3 +420,10 @@ test _           = True
 
 trueValue  = mkVectorValue [SLog True]
 falseValue = mkVectorValue [SLog False]
+
+
+-- helper that returns a NULL value for an empty vector
+
+vectorOrNull :: Vector -> Value
+vectorOrNull (V _ _ []) = VNull
+vectorOrNull vec        = VVector vec

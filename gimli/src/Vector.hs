@@ -2,7 +2,7 @@
 
 module Vector (
     Vector(..), ToVector(..),
-        naVector, falseVector, trueVector,
+        naVector, falseVector, trueVector, emptyVector,
         vlen, vtype, vlist, vmap, vnull,
         vecNum, vecLog, vecStr,
         vectorCoerce, mkVector, mkVectorOfType,
@@ -49,6 +49,8 @@ vmap :: (Scalar -> Scalar) -> Vector -> Vector
 vmap f v = mkVector $ map f (vlist v)
 
 vnull = null . vlist
+
+
 
 class    ToVector a        where toVector :: a -> Vector
 instance ToVector Scalar   where toVector x = mkVector [x]
@@ -101,3 +103,4 @@ vtCoerce VTLog x  = Just . keepNAs toSLog $ x
 naVector    = mkVector [SNa]
 falseVector = mkVector [SLog False]
 trueVector  = mkVector [SLog True]
+emptyVector = V VTLog 0 []

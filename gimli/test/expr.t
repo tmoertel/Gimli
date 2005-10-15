@@ -178,7 +178,7 @@ evals_ok( "1.a", qr/error/ );
 evals_ok( "!T"       , "F" );
 evals_ok( "![T,F]"   , "[F,T]" );
 evals_ok( "![T,NA,F]", "[F,NA,T]" );
-evals_ok( "!NULL",   , qr/error/ );
+evals_ok( "!NULL",   , 'NULL' );
 
 # %in%
 

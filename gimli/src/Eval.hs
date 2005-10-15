@@ -78,7 +78,7 @@ eval (EApp fnExp givenArgs) =
 
 eval (EVector es) = do
     vecs <- argof "vector constructor" $ mapM evalVectorNull es
-    return . VVector . mkVector $ concatMap vlist vecs
+    return . vectorOrNull . mkVector $ concatMap vlist vecs
 
 eval (EBind lvalue ev)
     = doBind "<-" evalAndBind lvalue ev
@@ -132,11 +132,14 @@ eval (ESelect etarget eselect) =
     during "table selection" $ do
     target <- eval etarget
     case target of
-        VVector vec  -> eval eselect >>= liftM VVector . selectVector vec
-        VList gl     -> eval eselect >>= selectList gl
+        VNull        -> getVectorCriteria >>= selectVector emptyVector
+        VVector vec  -> getVectorCriteria >>= selectVector vec
+        VList gl     -> getVectorCriteria >>= selectList gl
         VTable table -> select table eselect
         _ -> throwError $
              "selection applies only to vectors, lists, and tables"
+  where
+    getVectorCriteria = eval eselect >>= asVectorNull
 
 eval (EJoin joinType eltarg ertarg) = do
     ltable <- arg1of nm (evalTable eltarg)
@@ -325,8 +328,8 @@ computeFnBindings formalArgs givenArgs = do
 
 -- select elements _es_ from vector _vec_:
 
-selectVector (V tvtype _ txs) (VVector (V VTNum _ sxs)) =
-    return $ V tvtype (length xs) xs
+selectVector (V tvtype _ txs) (V VTNum _ sxs) =
+    return (vectorOrNull $ V tvtype (length xs) xs)
   where
     xs   = map pull (selectIndices [1..length txs] sxs)
     txs' = txs ++ repeat SNa
@@ -334,10 +337,10 @@ selectVector (V tvtype _ txs) (VVector (V VTNum _ sxs)) =
         | n > 0   = txs' !! (round n - 1)
     pull _        = SNa
 
-selectVector (V tvtype _ txs) (VVector (V VTLog _ sxs)) =
-    return $ V tvtype (length xs) xs
+selectVector (V tvtype _ txs) (V VTLog _ sxs) =
+    return (vectorOrNull $ V tvtype (length xs) xs)
   where
-    xs   = catMaybes $ zipWith (takeLogical SNa) txs (cycle sxs)
+    xs   = catMaybes $ zipWith (takeLogical SNa) txs (ncycle sxs)
 
 selectVector _ _ =
     throwError "vector-selection criteria must be a vector"
@@ -345,7 +348,7 @@ selectVector _ _ =
 
 -- select elements _es_ from list _gl_:
 
-selectList gl (VVector (V VTNum _ sxs)) =
+selectList gl (V VTNum _ sxs) =
     liftM (VList . mkGListNamed) $ mapM pull (selectIndices (range bnds) sxs)
   where
     vals   = glvals gl
@@ -359,19 +362,16 @@ selectList gl (VVector (V VTNum _ sxs)) =
              return (names ! i', vals ! i')
     pull _ = return naListElem
 
-selectList gl (VVector (V VTStr _ sxs)) =
+selectList gl (V VTStr _ sxs) =
     liftM (VList . mkGListNamed) $  mapM pull sxs
   where
     pull (SStr s) = glistLookupIndex gl s >>= \n -> return (names!n, vals!n)
     pull _        = return naListElem
     (names, vals) = pair (glnames, glvals) gl
 
-selectList gl (VVector (V VTLog _ sxs)) =
+selectList gl (V VTLog _ sxs) =
     return . VList . mkGListNamed . catMaybes $
-        zipWith (takeLogical naListElem) (glpairs gl) (cycle sxs)
-
-selectList _ _ =
-    throwError "list-selection criteria must be a vector"
+        zipWith (takeLogical naListElem) (glpairs gl) (ncycle sxs)
 
 
 naListElem = ("", mkVectorValue [SNa])
@@ -400,9 +400,9 @@ takeLogical _  _  _           = Nothing
 projectList gl pspec =
     liftM (head . elems . glvals . unVList) $ case pspec of
         PSVectorName nm ->
-            selectList gl (VVector (V VTStr 1 [SStr nm]))
+            selectList gl (V VTStr 1 [SStr nm])
         PSVectorNum  i  ->
-            selectList gl (VVector (V VTNum 1 [SNum $ fromIntegral i]))
+            selectList gl (V VTNum 1 [SNum $ fromIntegral i])
         _ ->
             throwError "lists do not support complex projection"
   where
@@ -433,7 +433,7 @@ constructTable tspecs = do
         case val of
             VTable t -> return $ zipWith mkNVP (tcnames t) (elems (tvecs t))
             VList gl -> liftM (zipWith mkNVP (map name . elems $ glnames gl)) $
-                        mapM asVector (elems $ glvals gl)
+                        mapM asVectorNull (elems $ glvals gl)
             _        -> throwError $
                 "can't construct table columns from (" ++ show val ++ ")"
     mkNVP n vec = NVP n (EVal $ VVector vec)
@@ -628,8 +628,8 @@ removeStars =
 
 uOp :: UnaryOp -> Value -> Eval r Value
 uOp UOpNegate x  = binOp BinOpTimes (VVector negOne) x
-uOp UOpNot v     = asVector v >>=
-                   return . VVector . vmap logNot . vectorCoerce VTLog
+uOp UOpNot v     = asVectorNull v >>=
+                   return . vectorOrNull . vmap logNot . vectorCoerce VTLog
 
 logNot (SLog x) = SLog (not x)
 logNot _        = SNa
@@ -717,14 +717,14 @@ propNa f a   b   = f a b
 vectorize :: (Scalar -> Scalar -> Eval r Scalar)
              -> Value -> Value -> Eval r Value
 vectorize op x y =
-    return . VVector =<< vectorize' op x y
+    return . vectorOrNull =<< vectorize' op x y
 
 vectorize' op (VVector vx) (VVector vy) =
-    return . toVector =<< zipWithM op (take len vx') (take len vy')
+    liftM toVector $ zipWithM op (take len vx') (take len vy')
   where
     len = maximum (map vlen [vx, vy])
-    vx' = cycle (vlist vx)
-    vy' = cycle (vlist vy)
+    vx' = ncycle (vlist vx)
+    vy' = ncycle (vlist vy)
 
 vectorize' _ _ _ = throwError "vector operation requires two vectors"
 
@@ -927,3 +927,8 @@ primVar nm eVarName = do
     during nm $ do
         var <- during "argument" (evalString eVarName)
         getBindingValue var
+
+-- null-handling cycle
+
+ncycle [] = []
+ncycle xs = cycle xs

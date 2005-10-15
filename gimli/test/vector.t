@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 46;
+use Test::More tests => 51;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -64,6 +64,7 @@ my $setup = "x <- [1,2,3,4]; y <- [1,3]";
 
 evals_ok( "$setup; x[1]"         , "1" );
 evals_ok( "$setup; x[3]"         , "3" );
+evals_ok( "$setup; x[F]"         , "NULL" );
 evals_ok( "$setup; x[[3,1]]"     , "[3,1]" );
 evals_ok( "$setup; x[c(T,F,F,T)]", "[1,4]" );
 evals_ok( "$setup; x[c(T,F)]"    , "[1,3]" );
@@ -86,3 +87,10 @@ evals_ok( "[1,2,3]:[4,5]"      , "[1,2,3,4]" );
 evals_ok( "T:T"                , 1 );
 evals_ok( "F:T"                , "[0,1]" );
 evals_ok( "1:-1"               , "NULL" );
+
+# NULLs are empty logical vectors
+
+evals_ok( 'length(NULL)'       , 0 );
+evals_ok( '1:2[F]'             , 'NULL' );
+evals_ok( '1:2[NULL]'          , 'NULL' );
+evals_ok( 'NULL[NULL]'         , 'NULL' );
