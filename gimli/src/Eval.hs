@@ -380,12 +380,12 @@ naListElem = ("", mkVectorValue [SNa])
 
 selectIndices indices sxs =
     case [ sx | sx@(SNum n) <- sxs, n < 0 ] of
-    _:_ -> [ SNum n
-             | n <- map fromIntegral indices
+    _:_ -> [ SNum (fromIntegral n)
+             | n <- indices
              , not (negate n `Set.member` nsxs) ]
     _   -> sxs
   where
-    nsxs = Set.fromList [ n | SNum n <- sxs ]
+    nsxs = Set.fromList [ round n | SNum n <- sxs ]
 
 
 takeLogical _  tx (SLog True) = Just tx
