@@ -11,6 +11,9 @@ TODO  -*- Outline -*-
   - logging
   - interrupt trapping (so you can use ^C to interrupt computations)
 
+* Projection
+  - Allow fuzzy matching of list/table elements like for fncall args:
+    list(xyz=1)$x ==> 1
 
 * Eval
 
