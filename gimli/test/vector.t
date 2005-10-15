@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 45;
+use Test::More tests => 46;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -66,9 +66,10 @@ evals_ok( "$setup; x[1]"         , "1" );
 evals_ok( "$setup; x[3]"         , "3" );
 evals_ok( "$setup; x[[3,1]]"     , "[3,1]" );
 evals_ok( "$setup; x[c(T,F,F,T)]", "[1,4]" );
+evals_ok( "$setup; x[c(T,F)]"    , "[1,3]" );
 evals_ok( "$setup; x[y]"         , "[1,3]" );
 evals_ok( "$setup; x[[1,NA,2]]"  , "[1,NA,2]" );
-evals_ok( "$setup; x[[T,NA,T]]"  , "[1,NA,3]" );
+evals_ok( "$setup; x[[T,NA,T]]"  , "[1,NA,3,4]" );
 evals_ok( "$setup; x[x==3]"      , "3" );
 evals_ok( "$setup; x[-1]"        , "[2,3,4]" );
 evals_ok( "$setup; x[2:4]"       , "[2,3,4]" );

@@ -337,7 +337,7 @@ selectVector (V tvtype _ txs) (VVector (V VTNum _ sxs)) =
 selectVector (V tvtype _ txs) (VVector (V VTLog _ sxs)) =
     return $ V tvtype (length xs) xs
   where
-    xs   = catMaybes $ zipWith (takeLogical SNa) txs sxs
+    xs   = catMaybes $ zipWith (takeLogical SNa) txs (cycle sxs)
 
 selectVector _ _ =
     throwError "vector-selection criteria must be a vector"
