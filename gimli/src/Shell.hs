@@ -112,9 +112,9 @@ eval cmd = do
     noContinue
     case parse cmd'' of
         Left err   -> do
-            case errorMessages err of
-                SysUnExpect "" : _ -> do  -- check for EOF error
-                    evalContinue parseError cmd''
+            case [e | e@(SysUnExpect "") <- errorMessages err] of
+                _ : _ -> do  -- check for EOF error
+                    evalContinue parseError cmd'
                 _ -> parseError
             where
               parseError = do
