@@ -59,16 +59,19 @@ evalL x = evalAndBind "LAST" x
 
 eval :: Expr -> Eval r Value
 
-eval (EVal v) =
+eval (Expr e st ed) =
+    eval' e
+
+eval' (EVal v) =
     return v
 
-eval (EFunc args body) =
+eval' (EFunc args body) =
     liftM (VFunc args body) getScope
 
-eval (EApp (EVal (VVector (V _ _ [SStr fname]))) args) =
-    eval (EApp (EVar fname) args)
+eval' (EApp (Expr (EVal (VVector (V _ _ [SStr fname]))) st ed) args) =
+    eval' (EApp (Expr (EVar fname) st ed) args)
 
-eval (EApp fnExp givenArgs) =
+eval' (EApp fnExp givenArgs) =
     during "function application" $ do
     fn <- eval fnExp
     case fn of
@@ -76,43 +79,43 @@ eval (EApp fnExp givenArgs) =
         VFunc args prog ctx -> doFnCall (args, prog, ctx) givenArgs
         x                   -> throwError "cannot call a non-function"
 
-eval (EVector es) = do
+eval' (EVector es) = do
     vecs <- argof "vector constructor" $ mapM evalVectorNull es
     return . vectorOrNull . mkVector $ concatMap vlist vecs
 
-eval (EBind lvalue ev)
+eval' (EBind lvalue ev)
     = doBind "<-" evalAndBind lvalue ev
 
-eval (EBindOver lvalue ev)
+eval' (EBindOver lvalue ev)
     = doBind "<<-" evalAndBindOver lvalue ev
 
-eval (ELocal e) = do
+eval' (ELocal e) = do
     enterNewScope (eval e)
 
-eval (EVar ident) =
+eval' (EVar ident) =
     getBindingValue ident
 
-eval (EUOp op x) =
+eval' (EUOp op x) =
     eval x >>= uOp op
 
-eval (EBinOp op el er) = do
+eval' (EBinOp op el er) = do
     l <- eval el
     r <- eval er
     binOp op l r
 
-eval (ESeries es) =
+eval' (ESeries es) =
     foldM (\_ e -> evalL e) VNull es
 
-eval (EBlock es) =
+eval' (EBlock es) =
     foldM (\_ e -> evalL e) VNull es
 
-eval (EIf etest etrue maybeEfalse) = do
+eval' (EIf etest etrue maybeEfalse) = do
     doIfBody etest etrue maybeEfalse id
 
-eval (EUnless etest etrue maybeEfalse) = do
+eval' (EUnless etest etrue maybeEfalse) = do
     doIfBody etest etrue maybeEfalse not
 
-eval (EFor var ecoll eblk) = do
+eval' (EFor var ecoll eblk) = do
     coll <- arg1of nm (evalCollection ecoll)
     during nm $ foldM bindAndEval VNull coll
   where
@@ -122,13 +125,16 @@ eval (EFor var ecoll eblk) = do
         bindVal var val
         eval eblk
 
-eval (EList args) =
+eval' (EList args) =
     during "list constructor" $ do
     vals  <- mapM (eval . gaExpr) args
     return . VList . mkGList $
         zipWith (\a v -> (gaName a, v)) args vals
 
-eval (ESelect etarget eselect) =
+eval' (EParens e) =
+    eval e
+
+eval' (ESelect etarget eselect) =
     during "table selection" $ do
     target <- eval etarget
     case target of
@@ -141,7 +147,7 @@ eval (ESelect etarget eselect) =
   where
     getVectorCriteria = eval eselect >>= asVectorNull
 
-eval (EJoin joinType eltarg ertarg) = do
+eval' (EJoin joinType eltarg ertarg) = do
     ltable <- arg1of nm (evalTable eltarg)
     rtable <- arg2of nm (evalTable ertarg)
     liftM VTable (tableJoin joinType ltable rtable)
@@ -150,7 +156,7 @@ eval (EJoin joinType eltarg ertarg) = do
     notTableError loc =
         throwError $ loc ++ " argument of join must be a table"
 
-eval (EProject etarget pspec) = do
+eval' (EProject etarget pspec) = do
     target <- arg1of "$" $ eval etarget
     case target of
         VList gl     -> during "projection on list" $ projectList gl pspec
@@ -158,7 +164,7 @@ eval (EProject etarget pspec) = do
         _            -> throwError $
                         "projection applies only to lists and tables"
 
-eval (ETable tspecs) =
+eval' (ETable tspecs) =
     during "table constructor" (constructTable tspecs)
 
 -- variable-lookup helper
@@ -173,10 +179,12 @@ getBindingValue ident = do
 -- binding helper
 
 doBind nm binder lvalue ev
-    | EVar ident <- lvalue = binder ident ev
-    | otherwise            = during nm $ do
-                             ident <- evalString lvalue
-                             binder ident ev
+    | (Expr (EVar ident) _ _) <- lvalue
+    = binder ident ev
+    | otherwise
+    = during nm $ do
+          ident <- evalString lvalue
+          binder ident ev
 
 -- error-reporting helpers
 
@@ -436,7 +444,7 @@ constructTable tspecs = do
                         mapM asVectorNull (elems $ glvals gl)
             _        -> throwError $
                 "can't construct table columns from (" ++ show val ++ ")"
-    mkNVP n vec = NVP n (EVal $ VVector vec)
+    mkNVP n vec = NVP n (mkNoPosExpr . EVal $ VVector vec)
     name ""     = "NA"
     name n      = n
 
@@ -456,7 +464,7 @@ tableJoin (JNatural il [] [] ir) tl tr =
     tableJoin (JNatural il sharedColumns sharedColumns ir) tl tr
   where
     sharedColumns =
-        map EVar . withDefault ["ROW.ID"] $
+        map (mkNoPosExpr . EVar) . withDefault ["ROW.ID"] $
         sharedStrings (tcnames tl) (tcnames tr)
 
 tableJoin (JNatural il lexps [] ir) tl tr =
@@ -497,7 +505,7 @@ dropJoinVars es table =
     tcnames table \\ joinVars es table
 
 joinVars es table =
-    sharedStrings [s | EVar s <- es] (tcnames table)
+    sharedStrings [s | Expr (EVar s) _ _ <- es] (tcnames table)
 
 buildRowMap table exps = do
     rowResults <- evalRows table exps
@@ -547,7 +555,7 @@ project table (PSTableOverlay envps) = do
     pscols nvps = map expForCol (colNames ++ newNvpCols)
       where
         colNames    = tcnames table
-        colNamesMap = Map.fromList [(n,EVar n) | n <- colNames]
+        colNamesMap = Map.fromList [(n, mkNoPosExpr $ EVar n) | n <- colNames]
         overlayMap  = Map.fromList nvps
         newNvpCols  = filter (not . flip Map.member colNamesMap) $ map fst nvps
         expForCol c = PSCNExpr . NVP c . fromJust $
@@ -572,7 +580,7 @@ project table (PSTable False pscols) = enterNewScope $ do
            zip colNames (map toVector $ transpose rows)
   where
     getName                   = pscol id fst
-    getExp                    = pscol EVar snd
+    getExp                    = pscol (mkNoPosExpr . EVar) snd
     pscol f g (PSCNum n)      = tableColumnIndexCheck table n >>=
                                 return . f . (tcols table !)
     pscol f g (PSCName s)     = tableColumnLookupIndex table s >>=
@@ -778,8 +786,8 @@ doPrim' (prim@Prim { primName=name }) args givenArgs =
 
     formalsForRead = mkArgList $
         [ Arg "file"      $ Nothing
-        , Arg "header"    $ Just (EVal trueValue)
-        , Arg "transpose" $ Just (EVal falseValue)
+        , Arg "header"    $ Just (mkNoPosExpr $ EVal trueValue)
+        , Arg "transpose" $ Just (mkNoPosExpr $ EVal falseValue)
         ]
 
     argsW f = doFnStylePrim f' formalsForWrite givenArgs where
@@ -791,7 +799,7 @@ doPrim' (prim@Prim { primName=name }) args givenArgs =
     formalsForWrite = mkArgList $
         [ Arg "table"     $ Nothing
         , Arg "file"      $ Nothing
-        , Arg "header"    $ Just (EVal trueValue)
+        , Arg "header"    $ Just (mkNoPosExpr $ EVal trueValue)
         ]
 
 doFnStylePrim body formalArgs givenArgs = do
@@ -818,7 +826,8 @@ coerceToGList val =
 primAsTable nm ethings =
     during nm $ do
     lists <- mapM ((coerceToGList =<<) . eval) ethings
-    during nm $ constructTable (map (TSplice . EVal . VList) lists)
+    during nm $
+        constructTable (map (TSplice . mkNoPosExpr . EVal . VList) lists)
 
 primIn nm velems vset = do
     es  <- arg1of nm $ liftM vlist (evalVector velems)

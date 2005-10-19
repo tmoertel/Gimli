@@ -2,7 +2,9 @@
 
 module Expr (
 
-    Expr(..),
+    Expr(..), mkNoPosExpr,
+    ExprPos(..), emptyExprPos,
+    CoreExpr(..),
     BinOp(..), UnaryOp(..),
     PSpec(..), PSCol(..), ENVPair(..), TableSpec(..),
     JoinOp(..), JoinInclusion(..),
@@ -43,10 +45,34 @@ import Vector
 import Utils
 
 -- ============================================================================
+-- AST for expressions
+-- ============================================================================
+
+data Expr = Expr
+    { exprExpr  :: CoreExpr
+    , exprStart :: ExprPos
+    , exprEnd   :: ExprPos
+    }
+    deriving (Eq, Ord)
+
+mkNoPosExpr ce = Expr ce emptyExprPos emptyExprPos
+
+data ExprPos = ExprPos
+    {
+      eposName :: String
+    , eposLine :: Int
+    , eposCol  :: Int
+    }
+    deriving (Eq, Ord)
+
+emptyExprPos = ExprPos "empty ExprPos" (-1) (-1)
+
+
+-- ============================================================================
 -- core expressions
 -- ============================================================================
 
-data Expr
+data CoreExpr
     = EApp Expr [GivenArg]
     | EBinOp !BinOp Expr Expr
     | EBlock [Expr]
@@ -59,7 +85,8 @@ data Expr
     | EJoin !JoinOp Expr Expr
     | EList [GivenArg]
     | ELocal Expr
-    | EProject Expr !PSpec
+    | EParens Expr
+    | EProject Expr PSpec
     | ESelect Expr Expr
     | ESeries [Expr]
     | ETable [TableSpec]
@@ -70,9 +97,13 @@ data Expr
     deriving (Eq, Ord)
 
 instance Show Expr where
+    showsPrec p e = showsPrec p (exprExpr e)
+
+instance Show CoreExpr where
 
     showsPrec p (EVal v)            = showsPrec p v
     showsPrec _ (EVector es)        = ss "[" . commajoin es . ss "]"
+    showsPrec _ (EParens e)         = showParen True (shows e)
     showsPrec _ (EVar s)            = ss s
     showsPrec _ (EIf e t f)         = ss "if " . shows e
                                     . ss " then " . shows t
