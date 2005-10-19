@@ -59,7 +59,7 @@ smokeloop:
 .PHONY: wc
 wc:
 	find . -type f | \
-	egrep -v '/$(app_dir)/|/$(dist_dir)/|~|.o$$|.hi$$|.prof$$' | \
+	egrep -v '/$(app_dir)/|/$(dist_dir)/|~|.o$$|.hi$$|.prof$$|/eg/' | \
 	xargs wc -l
 
 .PHONY: clean
