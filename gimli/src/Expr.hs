@@ -3,7 +3,6 @@
 module Expr (
 
     Expr(..), mkNoPosExpr,
-    ExprPos(..), emptyExprPos,
     CoreExpr(..),
     BinOp(..), UnaryOp(..),
     PSpec(..), PSCol(..), ENVPair(..), TableSpec(..),
@@ -37,6 +36,8 @@ import qualified Data.Map as Map
 
 import CoreTypes
 import EvalKernel (EvalCtx)
+import SourcePos
+
 import GList
 import PPrint
 import Scalar
@@ -50,22 +51,13 @@ import Utils
 
 data Expr = Expr
     { exprExpr  :: CoreExpr
-    , exprStart :: ExprPos
-    , exprEnd   :: ExprPos
+    , exprStart :: SourcePos
+    , exprEnd   :: SourcePos
     }
     deriving (Eq, Ord)
 
-mkNoPosExpr ce = Expr ce emptyExprPos emptyExprPos
+mkNoPosExpr ce = Expr ce emptySourcePos emptySourcePos
 
-data ExprPos = ExprPos
-    {
-      eposName :: String
-    , eposLine :: Int
-    , eposCol  :: Int
-    }
-    deriving (Eq, Ord)
-
-emptyExprPos = ExprPos "empty ExprPos" (-1) (-1)
 
 
 -- ============================================================================

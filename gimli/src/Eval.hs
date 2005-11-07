@@ -24,6 +24,8 @@ import PPrint
 import Utils
 import Glob
 
+import SourcePos
+
 import Debug.Trace
 
 -- ============================================================================
@@ -60,7 +62,10 @@ evalL x = evalAndBind "LAST" x
 eval :: Expr -> Eval r Value
 
 eval (Expr e st ed) =
-    eval' e
+    catchError (eval' e) describe
+  where
+    describe err = throwError $ "from " ++ posn ++ ": " ++ err
+    posn = sposName st ++ ":" ++ show (sposLine st) ++ ":" ++ show (sposCol st)
 
 eval' (EVal v) =
     return v

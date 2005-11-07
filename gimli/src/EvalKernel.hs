@@ -17,6 +17,7 @@ import Control.Monad.Error
 import Data.IORef
 
 import CoreTypes
+import SourcePos
 
 import qualified Data.Map as Map
 
@@ -85,7 +86,10 @@ newFrame nextFrame = do
 newTopLevel :: IO (EvalCtx v e)
 newTopLevel = do
     fr <- newFrame Nothing
-    return $ EvalCtx { ctxFrames = [fr], ctxTopLevel = fr }
+    return $ EvalCtx
+               { ctxFrames = [fr]
+               , ctxTopLevel = fr
+               }
 
 modifyCtxFrames f ctx =
     ctx { ctxFrames = f (ctxFrames ctx) }

@@ -13,6 +13,7 @@ import ExprParser
 import Expr
 import Lexer
 import Primitives
+import SourcePos
 
 import Debug.Trace
 
@@ -58,10 +59,10 @@ sourceExprParser p ctor = do
     epos <- getPosition
     return $ ctor e (toEpos spos) (toEpos epos)
   where
-    toEpos pos = ExprPos
-        { eposName = sourceName pos
-        , eposLine = sourceLine pos
-        , eposCol  = sourceColumn pos
+    toEpos pos = SourcePos
+        { sposName = sourceName pos
+        , sposLine = sourceLine pos
+        , sposCol  = sourceColumn pos
         }
 
 sEP p =
