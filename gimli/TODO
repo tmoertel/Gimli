@@ -22,7 +22,31 @@ X Get rid of VError: add ErrorT to Eval monad stack
 
 * Bugs
 
-- Associativity is wrong for Show instances when terms are of
+! I/O error during read.x casues Gimli to exit:
+
+  gimli> ov <- read.wsv("ov.wsv")
+  gimli: ov.wsv: openFile: does not exist (No such file or directory)
+  [thor@bifur cycles]$
+
+
+! write.wsv cannot be read back in when > 9 rows because row number
+  is interpreted as a column:
+
+     cycle ovu.day ovu.conf
+   1 50902      17   "high"
+   2 50807      15   "high"
+   3 50713      14   "high"
+   4 51617      15   "high"
+   5 50522      14    "low"
+   6 50426      15   "high"
+   7 50331      16   "high"
+   8 50308      14   "high"
+   9 40828      15   "high"
+  10 40803      15    "med"
+  11 40708      15   "high"
+
+
+X Associativity is wrong for Show instances when terms are of
   same precdence:
 
       gimli> :i 1 - (1 - 1)
