@@ -33,8 +33,8 @@ type EvalM err env state log prompt a =
 runEval :: (Monoid log) =>
            env    -- ^ Local environment
         -> state  -- ^ Global state
-        -> EvalM err env state log (Either err a) a -- ^ Action to run
-        -> IO (Either err a, state, log) -- ^ Result of running action
+        -> EvalM err env state log (Either err a) a -- ^ Eval action to run
+        -> IO (Either err a, state, log) -- ^ IO action that runs eval action
 runEval env state m =
     (\m' -> runRWST m' env state) . (`runContT` return) $ runErrorT m
 
