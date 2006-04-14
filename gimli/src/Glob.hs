@@ -41,7 +41,7 @@ search d p = do
 
 
 -- | Attempts to match the pattern 'p' against the string 's' and
---   returns 'Just s if they can be matched; 'Nothing', otherwise.
+--   returns 'Just s' if they can be matched; 'Nothing', otherwise.
 
 match :: String -> String -> Maybe String
 match ('*':_) ('.':_) =
@@ -56,7 +56,7 @@ match p s =
         when (not (null rest)) pfail
         return ""
     toParser '*' = liftM2 (++) (many get)
-    toParser '?' = liftM2 (++) (liftM (:[]) get)
+    toParser '?' = liftM2 (:)  get
     toParser c   = liftM2 (:)  (char c)
 
 
