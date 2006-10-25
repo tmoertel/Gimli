@@ -152,13 +152,9 @@ evals_ok( "NA != NA", "NA" );
 
 # string ops
 
-evals_ok( '"A" ++ ""', '"A"' );
-evals_ok( '"" ++ "A"', '"A"' );
-evals_ok( '"A" ++ "x"', '"Ax"' );
-evals_ok( '"x" ++ "A"', '"xA"' );
 
-evals_ok( '"A" ++ ""', '"A"' );
 evals_ok( '"" ++ "A"', '"A"' );
+evals_ok( '"A" ++ ""', '"A"' );
 evals_ok( '"A" ++ "x"', '"Ax"' );
 evals_ok( '"x" ++ "A"', '"xA"' );
 evals_ok( '"A" ++ ["","x"]', '["A","Ax"]' );
