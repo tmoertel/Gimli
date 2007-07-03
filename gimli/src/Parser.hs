@@ -47,7 +47,7 @@ gimlParseTable rows = do
         either (const (SStr s)) id (gimlReadScalar s)
 
 exprs :: Parser [Expr]
-exprs = semiSep expr
+exprs = sepEndBy expr semi
 
 expr :: Parser Expr
 expr = 
@@ -92,13 +92,13 @@ parensExpr =
     liftM EParens (parens expr)
 
 tableExpr =
-    reserved "table" >> parens (commaSep1 tspec) >>= return . ETable
+    reserved "table" >> parens (commaSepEnd1 tspec) >>= return . ETable
 
 tspec = do
     (liftM TCol anypair) <|> (liftM TSplice expr)
 
 listExpr =
-    reserved "list" >> parens (commaSep givenArg) >>= return . EList
+    reserved "list" >> parens (commaSepEnd givenArg) >>= return . EList
 
 localExpr =
     reserved "local" >> liftM ELocal blockOrExpr
@@ -110,7 +110,7 @@ functionExpr = do
     return $ EFunc args body
 
 formalArgs = do
-    liftM mkArgList . commaSep $ do
+    liftM mkArgList . commaSepEnd $ do
         name <- identifier
         defaultExpr <- option Nothing $ do
             reservedOp "="
@@ -143,8 +143,8 @@ vectorExpr = do
     <?> "vector"
 
 bracketVectorExpr =
-        (brackets (commaSep1 expr))
-    <|> try (symbol "c" >> parens (commaSep1 expr))
+        (brackets (commaSepEnd1 expr))
+    <|> try (symbol "c" >> parens (commaSepEnd1 expr))
     <?> "vector constructor"
 
 ifThenElseExpr = do
@@ -211,7 +211,7 @@ givenArg = (<?> "function argument") $ do
     (liftM (GivenArg Nothing) expr)
 
 opTable =
-    [ [ sfop "("  EApp (commaSep givenArg `followedBy` symbol ")")
+    [ [ sfop "("  EApp (commaSepEnd givenArg `followedBy` symbol ")")
       ]
     , [ vopr  "^" BinOpPower
       ]
@@ -297,7 +297,7 @@ opTable =
                     reservedOp s
                     r <- bexprs
                     eret (ctor l r)
-        bexprs    = option [] (braces (commaSep expr))
+        bexprs    = option [] (braces (commaSepEnd expr))
     infixFor      = (`Infix` AssocLeft) $ do
                         reserved "for"
                         var <- identifier
@@ -333,11 +333,11 @@ pspecTable =
 
 pspecTableAdditiveOverlay = do
     symbol "+"
-    commaSep1 anypair >>= return . flip EProject . PSTableOverlay
+    commaSepEnd1 anypair >>= return . flip EProject . PSTableOverlay
 
 pspecTableStraight = do
     negated <- option False (symbol "-" >> return True)
-    commaSep1 pspecElem >>= return . flip EProject . PSTable negated
+    commaSepEnd1 pspecElem >>= return . flip EProject . PSTable negated
 
 pspecElem =
         try (do i <- integer

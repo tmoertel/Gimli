@@ -38,8 +38,8 @@ ucheck <- function(t, id="ID") do
   if length(uniq(ids)) == length(ids) then t
   else do
       print("non-unique ID in table:", t);
-      NULL
-  end
+      NULL;
+  end;
 end;
 
 # Create a helper function to full-join two tables and then merge
@@ -47,7 +47,7 @@ end;
 
 full.join.and.merge.ids <- function(l, r, id="ID") do
   id.1 <- id ++ ".1";
-  (ucheck(l) === ucheck(r)) $ (+(id) = var(id) unless var(id.1); -(id.1))
+  (ucheck(l) === ucheck(r)) $ (+(id) = var(id) unless var(id.1); -(id.1));
 end;
 
 # This helper will extend a pedigree structure with the given
@@ -56,8 +56,8 @@ end;
 extend.ped <- function(ped, geno, id="ID") do
   for m in uniq(geno$marker) do                     # for each unique marker m
     g <- geno[marker==m]$((id), "geno."++m = geno); # extract matches for m
-    ped <- full.join.and.merge.ids(ped, g, id)      # & join into ped table
-  end
+    ped <- full.join.and.merge.ids(ped, g, id);     # & join into ped table
+  end;
 end;
 
 print( ped.in %extend.ped% file1 );
@@ -92,8 +92,8 @@ extend.t.ped <- function(ped, genoT, id="ID", marker.id="marker") do
   ms <- names(genoT);  # get column names as vector
   for m in ms[ms != marker.id] do
       g <- genoT$((id) = var(marker.id), "geno." ++ m = var(m));
-      ped <- full.join.and.merge.ids(ped, g, id)
-  end
+      ped <- full.join.and.merge.ids(ped, g, id);
+  end;
 end;
 
 print( extend.t.ped(ped.in, file3t) );
@@ -115,7 +115,7 @@ print( extend.t.ped(ped.in, file3t) );
 extend.ped.by.many.files <- function(ped, pathnames) do
   for f in pathnames do
     g <- read.wsv(f);
-    ped <- ped %extend.ped% g
+    ped <- ped %extend.ped% g;
   end
 end;
 

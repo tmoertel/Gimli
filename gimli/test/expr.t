@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 120;
+use Test::More tests => 122;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -189,3 +189,8 @@ evals_ok( '"c" %in% ["a","b"]', 'F' );
 
 evals_ok( "1; LAST"   , 1 );
 evals_ok( "1; 2; LAST", 2 );
+
+# trailing semicolon
+
+evals_ok( "local { 1 }"  , 1 );
+evals_ok( "local { 1; }" , 1 );

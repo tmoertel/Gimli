@@ -11,9 +11,9 @@ import qualified Utils as U
 
 gimlLexer :: P.TokenParser ()
 gimlLexer =
-    P.makeTokenParser
-    ( emptyDef
-      { commentStart    = ""
+    P.makeTokenParser (emptyDef
+      {
+        commentStart    = ""
       , commentEnd      = ""
       , commentLine     = "#"
       , reservedNames   = words $
@@ -25,8 +25,7 @@ gimlLexer =
       , opLetter        = oneOf . nub $ concatMap tail gimlOps
       , identStart      = letter <|> char '.'
       , identLetter     = alphaNum <|> oneOf "._"
-      }
-    )
+      })
 
 gimlOps =  words "$ * / + ! % - == != < > <= >= <- -> <<- ->> : = [ ]"
         ++ joinOps
@@ -65,6 +64,8 @@ charLiteral    = glex P.charLiteral
 comma          = glex P.comma
 commaSep       = glex P.commaSep
 commaSep1      = glex P.commaSep1
+commaSepEnd    = flip sepEndBy (glex P.comma)
+commaSepEnd1   = flip sepEndBy1 (glex P.comma)
 float          = glex P.float
 identifier     = glex P.identifier
 integer        = glex P.integer
@@ -78,6 +79,7 @@ reservedOp     = glex P.reservedOp
 semi           = glex P.semi
 semiSep        = glex P.semiSep
 semiSep1       = glex P.semiSep1
+semiSepEnd     = flip sepEndBy (glex P.semi)
 squares        = glex P.squares
 stringLiteral  = glex P.stringLiteral
 symbol         = glex P.symbol

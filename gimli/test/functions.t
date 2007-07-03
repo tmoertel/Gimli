@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 23;
+use Test::More tests => 26;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -14,8 +14,11 @@ use RunGimli;
 
 evals_ok( '(func() 1)           ()'        ,  1 );
 evals_ok( '(func(x) x + 1)      (1)'       ,  2 );
+evals_ok( '(func(x,) x + 1)     (1)'       ,  2 );  # trailing comma
+evals_ok( '(func(x) x + 1)      (1,)'      ,  2 );  # trailing comma
 evals_ok( '(func(x) x + 1)      (x=1)'     ,  2 );
 evals_ok( '(func(x=3) x + 1)    (1)'       ,  2 );
+evals_ok( '(func(x=3,) x + 1)   (1)'       ,  2 );  # trailing comma
 evals_ok( '(func(x=3) x + 1)    (x=1)'     ,  2 );
 evals_ok( '(func(x=3) x + 1)    ()'        ,  4 );
 evals_ok( '(func(xy=3) xy + 1)  (x=1)'     ,  2 );

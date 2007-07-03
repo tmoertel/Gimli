@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 51;
+use Test::More tests => 54;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -14,8 +14,10 @@ use RunGimli;
 
 # two vector-construction syntaxes
 
-evals_same_ok( "[1,2]" , "[...] vector syntax" );
-evals_ok(      "c(1,2)", "[1,2]", "c(...) vector syntax" );
+evals_same_ok( "[1,2]" ,  "[...] vector syntax" );
+evals_ok(      "c(1,2)",  "[1,2]", "c(...) vector syntax" );
+evals_ok(      "[1,2,]",  "[1,2]", "c(...) vector syntax" ); # trailing comma
+evals_ok(      "c(1,2,)", "[1,2]", "c(...) vector syntax" ); # trailing comma
 
 # scalars are really single-element vectors
 
@@ -76,6 +78,7 @@ evals_ok( "$setup; x[-1]"        , "[2,3,4]" );
 evals_ok( "$setup; x[2:4]"       , "[2,3,4]" );
 evals_ok( "$setup; x[-3 : -1]"   , "4" );
 evals_ok( "$setup; x[[-1,-3]]"   , "[2,4]" );
+evals_ok( "$setup; x[[-1,-3,]]"   , "[2,4]" );  # trailing comma
 
 # series
 

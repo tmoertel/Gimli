@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 76;
+use Test::More tests => 83;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -14,6 +14,11 @@ use RunGimli;
 #==============================================================================
 
 evals_exact_ok( "table(x=5)", <<EOF );
+  x
+1 5
+EOF
+
+evals_exact_ok( "table(x=5,)", <<EOF );  # trailing comma
   x
 1 5
 EOF
@@ -104,6 +109,13 @@ evals_exact_ok( "$t; x\$(1)", <<EOF);
 3 3
 EOF
 
+evals_exact_ok( "$t; x\$(1,)", <<EOF);  # trailing comma
+  x
+1 1
+2 2
+3 3
+EOF
+
 evals_exact_ok( "$t; x\$(1,2)", <<EOF);
   x  y
 1 1 11
@@ -114,6 +126,13 @@ EOF
 # by column name
 
 evals_exact_ok( "$t; x\$(x)", <<EOF);
+  x
+1 1
+2 2
+3 3
+EOF
+
+evals_exact_ok( "$t; x\$(x,)", <<EOF);  # trailing comma
   x
 1 1
 2 2
@@ -162,6 +181,13 @@ evals_exact_ok( "$t; x\$(-3)", <<EOF);
 3 3 13
 EOF
 
+evals_exact_ok( "$t; x\$(-3,)", <<EOF);  # trailing comma
+  x  y
+1 1 11
+2 2 12
+3 3 13
+EOF
+
 evals_exact_ok( "$t; x\$(-z)", <<EOF);
   x  y
 1 1 11
@@ -191,6 +217,13 @@ evals_exact_ok( "$t; x\$(-y,z)", <<EOF);
 EOF
 
 evals_exact_ok( "$t; x\$(x = y==12)", <<EOF);
+  x
+1 F
+2 T
+3 F
+EOF
+
+evals_exact_ok( "$t; x\$(x = y==12,)", <<EOF);  # trailing comma
   x
 1 F
 2 T
@@ -266,6 +299,13 @@ evals_exact_ok( "$t; x\$((1+1+1))", <<EOF );
 3 T
 EOF
 
+evals_exact_ok( "$t; x\$((1+1+1),)", <<EOF );  # trailing comma
+  z
+1 T
+2 F
+3 T
+EOF
+
 evals_exact_ok( "$t; x\$(c(2,1))", <<EOF);
    y x
 1 11 1
@@ -301,6 +341,13 @@ evals_ok( "$t; x\$((NULL))", qr/error: .* vector/x );
 # additive overlay projection
 
 evals_exact_ok( "$t; x\$(+x=x-1)", <<EOF);
+  x  y z
+1 0 11 T
+2 1 12 F
+3 2 13 T
+EOF
+
+evals_exact_ok( "$t; x\$(+x=x-1,)", <<EOF);   # trailing comma
   x  y z
 1 0 11 T
 2 1 12 F

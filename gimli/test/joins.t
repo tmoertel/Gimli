@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -99,7 +99,19 @@ join_exact_ok( "t{x} -=- u", <<EOF );
 2 3 T F
 EOF
 
+join_exact_ok( "t{x,} -=- u", <<EOF );  # trailing comma
+  x y z
+1 2 F T
+2 3 T F
+EOF
+
 join_exact_ok( "t -=- {x}u", <<EOF );
+  x y z
+1 2 F T
+2 3 T F
+EOF
+
+join_exact_ok( "t -=- {x,}u", <<EOF );  # trailing comma
   x y z
 1 2 F T
 2 3 T F

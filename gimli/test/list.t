@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 35;
+use Test::More tests => 36;
 
 BEGIN { unshift @INC, 'test/lib'; }
 use RunGimli;
@@ -14,6 +14,10 @@ use RunGimli;
 #==============================================================================
 
 evals_exact_ok( "list(x=5)", <<'EOF' );
+$x => 5
+EOF
+
+evals_exact_ok( "list(x=5,)", <<'EOF' );  # trailing comma
 $x => 5
 EOF
 
