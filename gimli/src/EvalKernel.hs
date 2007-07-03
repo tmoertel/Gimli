@@ -15,6 +15,7 @@ import Control.Monad.RWS
 import Control.Monad.Cont
 import Control.Monad.Error
 import Data.IORef
+import Data.Monoid
 
 import CoreTypes
 import SourcePos
@@ -70,7 +71,7 @@ type Env v e     = Map.Map Identifier (BoundVal v e)
 type FrameStack v e  = [Frame v e]
 data Frame v e   = Frame
     { frameEnvRef :: IORef (Env v e)
-    , frameNext   :: Maybe (Frame v e)
+    , frameChain  :: FrameStack v e
     }
 
 type Closure v e = (v, Maybe e)
@@ -78,14 +79,14 @@ type Closure v e = (v, Maybe e)
 clVal = fst
 clExp = snd
 
-newFrame :: (Maybe (Frame v e)) -> IO (Frame v e)
-newFrame nextFrame = do
+newFrame :: FrameStack v e -> IO (Frame v e)
+newFrame chain = do
     env <- newIORef emptyEnv
-    return $ Frame { frameEnvRef = env, frameNext = nextFrame }
+    return $ Frame { frameEnvRef = env, frameChain = chain }
 
 newTopLevel :: IO (EvalCtx v e)
 newTopLevel = do
-    fr <- newFrame Nothing
+    fr <- newFrame []
     return $ EvalCtx
                { ctxFrames = [fr]
                , ctxTopLevel = fr
@@ -116,7 +117,7 @@ getScope = ask
 enterNewScope :: EvalG r v e a -> EvalG r v e a
 enterNewScope m = do
     lf <- getLocalFrame
-    fr <- liftIO $ newFrame (Just lf)
+    fr <- liftIO $ newFrame (lf : frameChain lf)
     local (modifyCtxFrames (fr:)) m
 
 withinScope :: EvalCtx v e -> EvalG r v e a -> EvalG r v e a
