@@ -64,6 +64,10 @@ welcome =
     , ""
     , Name.name
     , "Version " ++ Version.version
+    , "Copyright 2005-2007 Thomas G. Moertel."
+    , "All rights reserved worldwide."
+    , "Licensed under the terms of the GNU General Public License, v. 3"
+    , ""
     , "Enter :? for help."
     ]
 
