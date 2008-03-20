@@ -112,16 +112,13 @@ eval cmd = do
     noContinue
     case parse cmd'' of
         Left err   -> do
-            case [e | e@(SysUnExpect "") <- errorMessages err] of
-                _ : _ -> do  -- check for EOF error
-                    evalContinue parseError cmd'
-                _ -> parseError
+            if null [e | e@(SysUnExpect "") <- errorMessages err]
+               then parseError
+               else evalContinue parseError cmd' -- continue line if EOF error
             where
               parseError = do
-                  noContinue
                   return (False, "syntax error: " ++ show err ++ "\n")
         Right expr -> do
-            modify $ \st -> st { stContinue = Nothing }
             doEval expr >>= either showError ppResult
   where
     quiet = not (null cmd') && last cmd' == ';'

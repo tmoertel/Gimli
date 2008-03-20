@@ -50,7 +50,7 @@ import Utils
 -- ============================================================================
 
 data Expr = Expr
-    { exprExpr  :: CoreExpr
+    { exprExpr  :: CoreExpr Expr
     , exprStart :: SourcePos
     , exprEnd   :: SourcePos
     }
@@ -64,34 +64,34 @@ mkNoPosExpr ce = Expr ce emptySourcePos emptySourcePos
 -- core expressions
 -- ============================================================================
 
-data CoreExpr
-    = EApp Expr [GivenArg]
-    | EBinOp !BinOp Expr Expr
-    | EBlock [Expr]
-    | EBind Expr Expr
-    | EBindOver Expr Expr
-    | EIf Expr Expr (Maybe Expr)
-    | EFor !Identifier Expr Expr
-    | EFunc ArgList Expr
-    | EUnless Expr Expr (Maybe Expr)
-    | EJoin !JoinOp Expr Expr
+data CoreExpr e
+    = EApp e [GivenArg]
+    | EBinOp !BinOp e e
+    | EBlock [e]
+    | EBind e e
+    | EBindOver e e
+    | EIf e e (Maybe e)
+    | EFor !Identifier e e
+    | EFunc ArgList e
+    | EUnless e e (Maybe e)
+    | EJoin !JoinOp e e
     | EList [GivenArg]
-    | ELocal Expr
-    | EParens Expr
-    | EProject Expr PSpec
-    | ESelect Expr Expr
-    | ESeries [Expr]
+    | ELocal e
+    | EParens e
+    | EProject e PSpec
+    | ESelect e e
+    | ESeries [e]
     | ETable [TableSpec]
-    | EUOp !UnaryOp Expr
+    | EUOp !UnaryOp e
     | EVal !Value
     | EVar !Identifier
-    | EVector [Expr]
+    | EVector [e]
     deriving (Eq, Ord)
 
 instance Show Expr where
     showsPrec p e = showsPrec p (exprExpr e)
 
-instance Show CoreExpr where
+instance Show a => Show (CoreExpr a) where
 
     showsPrec p (EVal v)            = showsPrec p v
     showsPrec _ (EVector es)        = ss "[" . commajoin es . ss "]"

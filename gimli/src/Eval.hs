@@ -40,7 +40,7 @@ type Eval r a = EvalG r Value Expr a
 -- ============================================================================
 
 evaluate :: EvalCtx Value Expr -- ^ context of evaluation
-         -> Expr               -- ^ expression to evaluation
+         -> Expr               -- ^ expression to evaluate
          -> IO (Either EvalError Value, EvalCtx Value Expr, LogS)
             -- ^ action carrying out the evaluation
 evaluate st expr = do
@@ -193,12 +193,12 @@ doBind nm binder lvalue ev
 
 -- error-reporting helpers
 
-during :: String -> Eval r a -> Eval r a
-during fname m =
+during :: MonadError String m => String -> m a -> m a
+during operation m =
     catchError m describe
   where
     describe err =
-        throwError $ "during " ++ fname ++ ": " ++ err
+        throwError $ "during " ++ operation ++ ": " ++ err
 
 argof  fname m = argxof fname ""   m
 arg1of fname m = argxof fname " 1" m

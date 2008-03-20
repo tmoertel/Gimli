@@ -5,10 +5,7 @@ import qualified Data.Set as S
 import Data.List (mapAccumL)
 
 combinations :: [[a]] -> [[a]]
-combinations xs =
-    foldr outer [[]] xs
-  where
-    outer xs yss = [ x:ys | x <- xs, ys <- yss ]
+combinations xs = sequence xs
 
 -- todo:  make uniqify fast when there are many duplicates
 -- uniqify (replicate 1000 "x")
