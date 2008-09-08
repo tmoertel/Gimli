@@ -1,0 +1,68 @@
+Name:                gimli
+Homepage:            http://blog.moertel.com/
+Version:             0.013
+Stability:           alpha
+License:             GPL
+License-file:        LICENSE
+Author:              Tom Moertel <tom@moertel.com>
+Maintainer:          Tom Moertel <tom@moertel.com>
+Copyright:           2005-2008 Thomas G. Moertel <tom@moertel.com>
+Category:            Compilers/Interpreters
+Build-type:          Simple
+Build-Depends:       base, mtl >= 1.0, parsec >= 2.0, containers,
+                     pretty >= 1.0, directory, array >= 0.1,
+                     regex-compat >= 0.71, unix >= 2.3, readline >= 1.0
+Synopsis:            Genetics Information Manipulation Language, Interactive
+Description:
+  The package contains an interpreter and interactive runtime for the
+  Genetics Information Manupulation Language.
+
+Cabal-version: >= 1.2
+extra-source-files:
+  Makefile
+  src/CoreTypes.hs
+  src/CSV/Export.hs
+  src/CSV/Parser.hs
+  src/DataMapRead.hs
+  src/Eval.hs
+  src/EvalKernel.hs
+  src/Expr.hs
+  src/ExprParser.hs
+  src/GList.hs
+  src/Glob.hs
+  src/HasNames.hs
+  src/Lexer.hs
+  src/LoadData.hs
+  src/Name.hs
+  src/Parser.hs
+  src/PPrint.hs
+  src/Primitives.hs
+  src/Scalar.hs
+  src/Shell.hs
+  src/SourcePos.hs
+  src/Table.hs
+  src/TSV/Parser.hs
+  src/Utils.hs
+  src/Vector.hs
+  src/Version.hs
+  src/WSV/Parser.hs
+  test/shell.t
+  test/vector.t
+  test/lib/RunGimli.pm
+  test/table.t
+  test/specials.t
+  test/formating.t
+  test/inspect.t
+  test/joins.t
+  test/read-write.t
+  test/list.t
+  test/functions.t
+  test/01-shell.t
+  test/state.t
+  test/primitives.t
+  test/expr.t
+
+Executable:          gimli
+Main-is:             Shell.hs
+ghc-options:         -O2
+hs-source-dirs:      src

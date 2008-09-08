@@ -23,7 +23,9 @@ sub run_gimli {
         open STDOUT, '>&', $fh  or die "could not redirect stdout: $!";
         open STDERR, ">&STDOUT" or die "could not dup stdout to stderr: $!";
         close $fh               or die "error on close of tempfile: $!";
-        exec "app/gimli"        or die "could not exec gimli: $!";
+        exec "app/gimli" or
+        exec "dist/build/gimli/gimli"
+                                or die "could not exec gimli: $!";
     }
 
     wait;
