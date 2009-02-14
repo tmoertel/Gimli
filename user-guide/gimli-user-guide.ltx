@@ -1,0 +1,1089 @@
+% $Id: contract-exhibits.ltx,v 1.4 2005/03/01 21:31:20 thor Exp $
+\documentclass{mcarticle}
+\frenchspacing
+
+\usepackage{xspace}
+\usepackage{varioref}
+\usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+\usepackage[pdftex]{graphicx,color}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg,.eps,.mps}
+% \usepackage{eso-pic}
+%
+% add confidential margin banner
+% \AddToShipoutPicture{%
+% \put(36,250){\rotatebox{90}{%
+%   \scalebox{7}{%
+%     \color[gray]{.9}{{%
+%       \fontsize{16}{16}\textrm{Draft}}}}}}}
+
+\begin{document}
+
+\newcounter{ex}
+\theoremstyle{definition} \newtheorem{example}[ex]{Example}
+
+
+\newcommand{\giml}{\textsc{giml}\xspace}
+\newcommand{\gimli}{Gimli\xspace}
+
+\newcommand{\strong}[1]{\textbf{#1}}
+\newcommand{\callout}[1]{\strong{#1}.}
+\newcommand{\typewriter}[1]{\texttt{#1}}
+\newcommand{\xelem}[1]{\typewriter{#1}}
+\newcommand{\xattr}[1]{\typewriter{#1}}
+\newcommand{\code}[1]{\typewriter{#1}}
+
+%\newcommand{\gets}{$\leftarrow$\xspace}
+\newcommand{\ra}{$\rightarrow$\xspace}
+
+\newcommand{\sref}[1]{\S\vref*{#1}}
+
+\newcommand{\tbw}{[\emph{To be written.}]}
+
+\newcommand{\na}{\textsc{na}\xspace}
+
+\newcommand{\var}{\emph{var}\xspace}
+\newcommand{\expr}{\emph{expr}\xspace}
+\newcommand{\exprs}{\emph{expr}; \ldots\xspace}
+\newcommand{\test}{\emph{test}\xspace}
+\newcommand{\texpr}{\emph{table}\xspace}
+\newcommand{\pspec}{\emph{pspec}\xspace}
+\newcommand{\colspec}{\emph{colspec}\xspace}
+\newcommand{\true}{\code{T}\xspace}
+\newcommand{\false}{\code{F}\xspace}
+\newcommand{\NULL}{\code{NULL}\xspace}
+
+
+%==============================================================================
+\title{\gimli Quick User Guide}
+\author{Thomas G. Moertel}
+\maketitle
+\begin{small}
+\tableofcontents
+\end{small}
+
+\newpage
+
+%==============================================================================
+\section{Summary of operators and parsing precedence}
+
+The following table summarizes \gimli's operators and parsing precedence.
+Earlier-listed operations take precedence over later-listed operations.\\
+
+\begin{small}
+\begin{tabular}{lll}
+\textbf{Description} &\textbf{Infix associativity} &\textbf{Syntax / symbol} \\
+\hline
+Application      & --            & \expr\verb!(! \expr, \ldots \verb!)! \\
+\hline
+Arithmetic power & right         & \expr \verb!^! \expr \\
+\hline
+Unary negation   & --            & \verb!-!\expr \\
+\hline
+Series construction & left        & \expr \verb!:! \expr \\
+\hline
+Selection            &  --       & \texpr\verb![! \expr \verb!]!\\
+Projection to vector & left      & \texpr \verb!$! \emph{number-or-column} \\
+Projection to table  & left      & \texpr \verb!$(! \pspec; \ldots \verb!)! \\
+ & & where \pspec is one of--- \\
+ & & \quad \colspec, \ldots \\
+\quad {subtractive} & & \quad \verb!-! \colspec, \ldots \\
+\quad {additive}    & & \quad \verb!+! \colspec, \ldots \\
+ & & where \colspec is one of---\\
+ & & \quad \emph{colname} \\
+ & & \quad \emph{colnum} \\
+ & & \quad \emph{colname}\verb!=!\expr \\
+ & & \quad \verb!*! \\
+\hline
+Inner natural join       & right & \texpr \verb!-=-! \texpr \\
+Left-outer natural join  &       & \texpr \verb!==-! \texpr \\
+Right-outer natural join &       & \texpr \verb!-==! \texpr \\
+Full-outer natural join  &       & \texpr \verb!===! \texpr \\
+Cartesian-product join   &       & \texpr \verb!***! \texpr \\
+\hline
+Infix function application & left & \expr \verb!%!\emph{function}\verb!%! \expr \\
+\hline
+Multiplicative operators & left  & \verb!* /! \\
+\hline
+Additive operators       & left  & \verb!+ -! \\
+\hline
+String concatenation     & left  & \verb!++! \\
+\hline
+Comparisons              & left  & \verb|== !=| \\
+                         &       & \verb|<  <=| \\
+                         &       & \verb|>  >=| \\
+\hline
+Unary not                & --    & \verb|!|\expr \\
+\hline
+Vectorized logical operators & right & \verb!|  &!\\
+Scalar logical operators & right & \verb!|| &&!\\
+\hline
+Binding                  & right & \var \verb!<-! \expr\\
+                         &       & \var \verb!<<-! \expr\\
+                         & left  & \expr \verb!->! \var\\
+                         &       & \expr \verb!->>! \var\\
+\hline
+Flow control             & left  & \expr \verb!if! \test \\
+                         &       & \expr \verb!unless! \test \\
+                         &       & \expr \verb!for! \var \verb!in! \emph{collection}
+\end{tabular}
+\end{small}
+
+
+%==============================================================================
+\clearpage
+\section{Summary of built-in functions}
+
+\gimli offers the following built-in functions:
+
+\begin{itemize}
+  \item \verb|as.list(|\expr, \ldots \verb|)|\\ Evaluates the given
+    expressions, converts the resulting values (which can be vectors,
+    tables, or lists) into lists, and then joins the lists into a
+    single, all-encompassing list.
+  \item \verb|as.table(|\expr, \ldots \verb|)|\\ Evaluates the given
+    expressions, converts the resulting values into lists, and then
+    joins the lists into a single, all-encompassing table.
+  \item \verb|in(|$X, C$\verb|)|\\ Returns a vector having one
+    element for each element of the vector $X$.  The value of each
+    output element is \true if the value of the corresponding element
+    in $X$ is contained in the vector $C$; otherwise the output
+    element is \false.
+  \item \verb|glob(|\emph{pat}, \ldots \verb|)|\\ Each of the given
+    strings is considered to be a shell ``file globbing'' pattern and
+    matched against files in the filesystem.  The result is a vector of
+    files (pathnames) that matched the given patterns or \NULL if there
+    were no matches.
+  \item \verb|inspect(|\expr, \ldots \verb|)|\\ For each given expression,
+    this function prints the expression, an arrow, and then the result
+    of evaluating the expression.
+  \item \verb|is.na(|$X$\verb|)|\\ Returns a vector where each
+    element is \true if the corresponding element in $X$ is \verb|NA|
+    and \false otherwise.
+  \item \verb|length(|\expr, \ldots \verb|)|\\ Evaluates each given
+    expression as a vector and returns the sum of the vectors' lengths.
+  \item \verb|match(|\emph{string}, \emph{regex}\verb|)|\\ Matches
+    the given string against the given \textsc{posix} extended regular
+    expression and returns one of the following values:
+    \begin{itemize}
+      \item \NULL, if the \emph{string} did not match the \emph{regex};
+      \item an $n$-element vector, where each element contains the
+        subset of \emph{string} matched by the corresponding
+        parenthesized portion of \emph{regex};
+      \item or, if there were no parenthesized portions, a 3-element
+        vector $[b,m,a]$ where $b$ is the subset of \emph{string}
+        before the match, $m$ is the match, and $a$ is the subset of
+        \emph{string} after the match.
+    \end{itemize}
+  \item \verb|names(|\emph{table}\verb|)|\\ Returns the names of the
+    columns of the given \emph{table} in the order they appear in the table.
+  \item \verb|print(|\expr, \ldots \verb|)|\\ Prints the results of
+    evaluating the given expressions.
+  \item \verb|sort(|\emph{vector}, \ldots \verb|)|\\ The elements of
+    the given vectors are sorted and returned as a single vector.
+  \item \verb|uniq(|\emph{vector}, \ldots \verb|)|\\ The elements of
+    the given vectors are combined into a single vector where each
+    distinct value occurs only once (i.e., duplicates are removed).
+  \item \verb|var(|\emph{expr}\verb|)|\\ Evaluates the given \expr as
+    a string and returns the value of the variable whose name is given by
+    the string.
+\end{itemize}
+
+
+
+%==============================================================================
+\clearpage
+\section{Block expressions}
+
+A block expression is a series of expressions that act as one.  The
+expressions in the series must be separated by semicolons.
+
+In \gimli, blocks are created using either braces or \emph{do-end}
+notation, which delimit the blocks.  Typically, the first form is used
+for single-line blocks and the second for multi-line blocks, although
+this convention is not mandatory.
+
+\begin{center}
+\begin{tabular}{l@{\quad}l}
+{Single-line block} & {Multi-line block} \\
+\hline
+\verb!{! \exprs \verb!}! & \verb!do!    \\
+                         & \quad \exprs \\
+                         & \verb!end!
+\end{tabular}
+\end{center}
+
+The result of evaluating a block is the final result of evaluating
+the series of expressions within the block.
+
+\begin{example} Blocks.\\
+\begin{tabular}{@{}lll@{\quad}l}
+Input   &  &  Result    & Description \\
+\hline
+\verb!{1; 2; 3}! & \ra & \verb!3!
+    & three expressions as a single-line block\\
+\verb!do!      & \ra & \verb!2!
+    & two expressions as a multi-line block\\
+\verb!  1;!      \\
+\verb!  2!      \\
+\verb!end!
+\end{tabular}
+\end{example}
+
+Blocks are used to insert multi-expression logic into \emph{if},
+\emph{unless}, \emph{for}, and \emph{function} expressions and---at
+present---can only be used in these contexts.
+
+\begin{center}
+\begin{verbatim}
+if x < 3 then do
+    ...
+end
+\end{verbatim}
+\end{center}
+
+
+
+%==============================================================================
+\clearpage
+\section{Flow-control expressions}
+
+\gimli supports the following expressions that can be used to control
+the flow of evaluation:
+
+
+\begin{center}
+\begin{tabular}{lll}
+{Term form}  & {Infix form} \\
+\hline
+\verb!if! \test \verb!then! \expr
+    & \expr \verb!if! \test \\
+\verb!if! \test \verb!then! \expr \verb!else! \expr
+    & -- \\
+\hline
+\verb!unless! \test \verb!then! \expr
+    & \expr \verb!unless! \test \\
+\verb!unless! \test \verb!then! \expr \verb!else! \expr
+    & -- \\
+\hline
+\verb!for! \var \verb!in! \emph{vector} \verb!do! \exprs \verb!end!
+    & \expr \verb!for! \var \verb!in! \emph{vector} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{If expression}
+
+The \emph{if} expression has three forms:
+
+\begin{center}
+\begin{tabular}{l}
+\verb!if! $e_t$ \verb!then! $e_S$ \\
+\verb!if! $e_t$ \verb!then! $e_S$ \verb!else! $e_F$ \\
+$e_S$ \verb!if! $e_t$
+\end{tabular}
+\end{center}
+
+\noindent
+All three are evaluated as follows:
+
+\begin{enumerate}
+  \item \gimli evaluates the test expression $e_t$ to yield the test
+    result $t$.
+  \item If $t$ is \false, \code{NA}, or \NULL, the test fails;
+     otherwise, the test succeeds.
+   \item If the test succeeded, \gimli evaluates $e_S$ and returns the
+     result as the value of the \emph{if} expression.
+   \item Otherwise, if there is an \emph{else} clause, \gimli
+     evaluates $e_F$ and returns the result as the value of the
+     \emph{if} expression.
+   \item Otherwise, \gimli returns the result of the test ($t$)
+     as the value of the \emph{if} expression.
+\end{enumerate}
+
+
+\subsection{Unless expression}
+
+The \emph{unless} expression is the opposite of the \emph{if} expression
+and also has three forms:
+
+\begin{center}
+\begin{tabular}{l}
+\verb!unless! $e_t$ \verb!then! $e_F$ \\
+\verb!unless! $e_t$ \verb!then! $e_F$ \verb!else! $e_S$ \\
+$e_F$ \verb!unless! $e_t$
+\end{tabular}
+\end{center}
+
+\noindent
+All three are evaluated as follows:
+
+\begin{enumerate}
+  \item \gimli evaluates the test expression $e_t$ to yield the test
+    result $t$.
+  \item If $t$ is \false, \code{NA}, or \NULL, the test fails;
+     otherwise, the test succeeds.
+   \item Unless the test succeeded (i.e., if the test failed), \gimli
+     evaluates $e_F$ and returns the result as the value of the
+     \emph{unless} expression.
+   \item Otherwise, if there is an \emph{else} clause, \gimli
+     evaluates $e_S$ and returns the result as the value of the
+     \emph{unless} expression.
+   \item Otherwise, \gimli returns the result of the test ($t$)
+     as the value of the \emph{unless} expression.
+\end{enumerate}
+
+\subsubsection{If-unless relationship}
+
+The following equivalence summarizes the relationship between the
+\emph{if} and \emph{unless} expressions:
+
+\begin{center}
+\verb!if! $e_t$ \verb!then! $e_S$ \verb!else! $e_F$
+$\equiv$
+\verb!unless! $e_t$ \verb!then! $e_F$ \verb!else! $e_S$
+\end{center}
+
+\subsubsection{Using unless for defaulting}
+
+The infix form of the \emph{unless} expression makes a convenient
+way to specify default values:
+
+\begin{center}
+\emph{default} \verb!unless! \emph{value}
+\end{center}
+
+\noindent
+Unless a \emph{value} is supplied, the \emph{default} value will be
+used instead.
+\strong{Note:} This trick works only for non-logical values.
+
+
+\subsection{For expression}
+
+The \emph{for} expression is used to iterate over the elements of a
+collection (list or vector).  It has two forms:
+
+\begin{center}
+\begin{tabular}{ll}
+Term form  & \verb!for! $x$ \verb!in! $e_C$ $e_B$ \\
+Infix form & $e_B$ \verb!for! $x$ \verb!in! $e_C$ \\
+\end{tabular}
+\end{center}
+
+\noindent
+In the term form, the body expression $e_B$ must be a block, i.e., a
+series of expressions delimited by braces or \emph{do-end} notation.
+
+\gimli evaluates \emph{for} expressions as follows:
+
+\begin{enumerate}
+  \item \gimli evaluates the collection expression $e_C$ to yield the
+    collection $C$ over which to iterate.
+  \item If $C$ is empty, \gimli returns \NULL as the value of the
+    \emph{for} expression.
+  \item Otherwise, \gimli iterates over $C$, binding each element in
+    turn to the given variable $x$ and then evaluating the body
+    expression $e_B$.
+  \item \gimli returns the result of the last evaluation as the value
+    of the \emph{for} expression.
+\end{enumerate}
+
+
+\begin{example} For expressions.\\
+\begin{tabular}{@{}lll@{\quad}l}
+Input   &  &  Result    & Description \\
+\hline
+\verb!x <- 1; for y in 1:5 { x <- x * y }! & \ra & \verb!120!
+    & compute $5!$\\
+\verb!x <- 1; x <- x * y for y in 1:5! & \ra & \verb!120!
+    & same as above\\
+\end{tabular}
+\end{example}
+
+
+%==============================================================================
+\clearpage
+\section{Working with vectors}
+
+\gimli's support for logical, string, and numeric values is
+vectorized; that is, you can create vectors containing any number of
+such values---as long as all the values within each vector are of the
+same kind.  In fact, to \gimli, scalar values are really vectors of
+length one.
+
+Vectors are created using bracket syntax:
+
+\begin{center}
+\verb![! \emph{elems}\ldots \verb!]!\\
+\verb!c(! \emph{elems}\ldots \verb!)!
+\end{center}
+
+\noindent
+The first form is easier to type.  The second form is provided for
+compatibility with R's vector-construction syntax.
+
+%------------------------------------------------------------------------------
+\subsection{Vector construction}
+
+A list of elements \emph{elems} goes inside of the brackets.  Each
+element can be a scalar value like \verb!3! or an expression.  Such
+element expressions will be evaluated as vectors themselves, and the
+resulting elements will be inserted into the vector being constructed.
+
+\begin{example} Vector construction.\\
+\begin{tabular}{@{}lll}
+Input                      &    &   Result \\
+\hline
+\verb|[1,2,2+1]|           & \ra & \verb|[1,2,3]| \\
+\verb|c(1,4,5)|            & \ra & \verb|[1,4,5]| \\
+\verb|[1,c(2,3)]|          & \ra & \verb|[1,2,3]| \\
+\verb|x <- [1,2]; [x,2+x]| & \ra & \verb|[1,2,3,4]|
+\end{tabular}
+\end{example}
+
+%------------------------------------------------------------------------------
+\subsection{Vector indexing}
+
+\label{vector:indexing}
+You can select elements from a vector using indexing syntax, which can
+also be used on lists (see \sref{list:indexing}) and, in a different
+way, on tables (see \sref{table:selection}):
+\begin{center}
+\emph{vector} \verb![! \expr \verb!]!
+\end{center}
+where \expr can be one of the following:
+\begin{center}
+\begin{tabular}{lll}
+\emph{Expr}          & Example     & Meaning \\
+\hline
+a number             & \code{2}    & Select the 2nd element \\
+a vector of numbers  & \verb![3,1]! & Select the 3rd and then the 1st elements\\
+a negative number    & \verb!-2!   & Select all but the 2nd element \\
+a vector of negative numbers   & \verb!-[3,1]!   & Select all but the 1st and 3rd elements \\
+a vector of logicals & \verb![T,F]! & Select elements in odd positions \\[1ex]
+\end{tabular}
+\end{center}
+
+\noindent Note that when indexing on a vector of logical values, the
+logical values will be recycled as necessary to create a one-to-one
+correspondence between the logicals and the elements of the vector
+being indexed over.  The elements for which the corresponding
+logical value is \true will be selected; the others will be omitted.
+
+\begin{example} Vector indexing.\\
+\begin{tabular}{@{}lll}
+Input                         &     &   Result \\
+\hline
+\verb|[1,2,3,9][2]|           & \ra &   \verb|2| \\
+\verb|[1,2,3,9][c(2,NA,4)]|   & \ra &   \verb|[2,NA,9]| \\
+\verb|[1,2,3,9][[T,F,F,T]]|   & \ra &   \verb|[1,9]| \\
+\verb|[1,2,3,9][c(F,T)]|      & \ra &   \verb|[2,9]| \\
+\verb|[1,2,3,9][F]|           & \ra &   \verb|NULL| \\
+\verb|[1,2,3,9][T]|           & \ra &   \verb|[1,2,3,9]|
+\end{tabular}
+\end{example}
+
+%------------------------------------------------------------------------------
+\subsection{Vectorized operations}
+
+All of \gimli's standard operators, such as \verb|+|, \verb|!|, and
+\verb|<| are vectorized and can be applied directly to vectors.  When
+\gimli applies a binary operator, such as \verb|+|, to vectors $X$ and
+$Y$, it applies the operator across the vectors \emph{elementwise}:
+the first elements of both vectors are processed as a pair, and then
+the second elements, and so on.  If the vectors are of unequal
+lengths, the shorter's elements will be recycled until its length
+matches the longer's.
+
+\begin{example} Operations on vectors.\\
+\begin{tabular}{@{}lll}
+Input                    &     &   Result \\
+\hline
+\verb|[1,2,3,4] + 1|     & \ra &   \verb|[2,3,4,5]| \\
+\verb|[1,2,3,4] * [1,0]| & \ra &   \verb|[2,0,4,0]| \\
+\verb|![T,F,F]|          & \ra &   \verb|[F,T,T]|
+\end{tabular}
+\end{example}
+
+
+
+%==============================================================================
+\clearpage
+\section{Working with random-access lists}
+
+\gimli's lists are like vectors but can contain any kind of data, not
+just scalar values.  You can put vectors, tables, and even lists
+inside of lists, and the elements of a list need not be of the same
+kind.  Further, you can name the elements of lists, making them
+useful as associative arrays.
+
+%------------------------------------------------------------------------------
+\subsection{List construction}
+
+You can create lists via the \verb|list| constructor:
+
+\begin{example} Constructing lists.\\
+\begin{tabular}{@{}lll}
+Input                     &     &   Result \\
+\hline
+\verb|list() # empty list|& \ra &   \verb|list()| \\
+\hline
+\verb|list("hi")|         & \ra &   \verb|[1] => "hi"| \\
+\hline
+\verb|list(x="hi")|       & \ra &   \verb|$x => "hi"| \\
+\hline
+\verb|list(x="hi",[T,F])| & \ra &   \verb|$x => "hi"| \\
+                          &     &   \verb|[2] => [T,F]|\\
+\hline
+\verb|list(x=list(123))|  & \ra &   \verb|$x => [1] => 123| \\
+\hline
+\verb|list(list(x=123))|  & \ra &   \verb|[1] => $x => 123| \\
+\end{tabular}
+\end{example}
+
+
+%------------------------------------------------------------------------------
+\subsection{List indexing}
+
+\label{list:indexing}
+\gimli lets you select elements from lists just like from vectors but
+gives you additional options.  Lists elements can be named, and so you
+can use names, in addition to numbers, for indicies.
+
+\gimli provides two ways to index lists---selection and simple
+projection.  Selection works just like indexing on vectors: you
+provide a vector that describes the elements you want, and \gimli
+gives you a new list that contains only those elements.
+
+\begin{example} List indexing via selection.\\
+\begin{tabular}{@{}lll}
+Input                                &     &   Result \\
+\hline
+\verb|list(x=1,5,"hi")[2]|           & \ra &   \verb|[1] => 5| \\
+\hline
+\verb|list(x=1,5,"hi")[[1,3]]|       & \ra &   \verb|$x => 1| \\
+                                     &     &   \verb|[2] => "hi"| \\
+\hline
+\verb|list(x=1,5,"hi")["x"]|         & \ra &   \verb|$x => 1| \\
+\hline
+\verb|list(x=1,5,"hi")[-1]|          & \ra &   \verb|[1] => 5| \\
+                                     &     &   \verb|[2] => "hi"| \\
+\hline
+\verb|list(x=1,5,"hi")[[F,T,T]]|     & \ra &   \verb|[1] => 5| \\
+                                     &     &   \verb|[2] => "hi"| \\
+\hline
+\verb|list(x=1,5,"hi")[F]|           & \ra &   \verb|list()| \\
+\end{tabular}
+\end{example}
+
+\noindent
+Simple projection, on the other hand, lets you pluck a single value
+from a list.
+
+\begin{example} List indexing via simple projection.\\
+\begin{tabular}{@{}lll}
+Input                                &     &   Result \\
+\hline
+\verb|list(x=1,5,"hi")$3|            & \ra &   \verb|"hi"| \\
+\verb|list(x=1,5,"hi")$x|            & \ra &   \verb|1| \\
+\end{tabular}
+\end{example}
+
+
+
+%==============================================================================
+\clearpage
+\section{Working with tables}
+
+This section describes \gimli's table tools---selections, projections,
+and joins.
+
+%------------------------------------------------------------------------------
+\subsection{Table construction}
+
+In \gimli, tables are constructed with the \verb!table! constructor:
+
+\begin{center}
+\verb!table(!\emph{colname}\verb!=!\emph{vector}, \ldots \verb!)!\\
+\end{center}
+
+\noindent
+where each \emph{colname}\verb!=!\emph{vector} pair defines a column
+in the resulting table.  The \emph{colname} expression defines
+the name of the column, and the \emph{vector} expression defines the
+column's values.  All columns of the table must have the same length.
+
+\gimli interprets each \emph{colname} expression as follows.  First,
+if the expression is a name, such as \verb!x! or \verb!my.col!, \gimli
+uses the expression itself as the column's name.  Otherwise, \gimli
+evaluates the expression and uses the resulting string as the column's
+name.  If any of the column names are not unique, \gimli makes them
+unique by appending suffixes like \verb!.1!, \verb!.2!, and so on.
+
+\callout{Table splicing} You can ``splice'' columns from existing
+lists and tables into a new table by listing the to-be-spliced lists
+and tables amongst the \emph{colname}\verb!=!\emph{vector} pairs in
+the new table's \verb!table! constructor.  When you do so, the vectors
+and columns from the spliced lists and tables will be inserted
+directly into the new table.  As always, the lengths of all the
+vectors and columns must be the same.
+
+
+\begin{example} Table construction.\\
+\begin{tabular}{@{}lll}
+Input                    &     &   Result \\
+\hline
+\verb|table(x=[1,2])|     & \ra & \verb|  x|\\
+                          &     & \verb|1 1|\\
+                          &     & \verb|2 2|\\
+\hline
+\verb|x <- "Z";|          & \ra & \verb|  x Z|\\
+\verb|table(x=[1,2],(x)=[2,3]])|&& \verb|1 1 2|\\
+                          &     & \verb|2 2 3|\\
+\hline
+\verb|t <- table(x=[1,2]);|  & \ra & \verb|  x Q|\\
+\verb|table(t,Q=[T,F])|   &     & \verb|1 1 T|\\
+                          &     & \verb|2 2 F|\\
+\end{tabular}
+\end{example}
+
+
+%------------------------------------------------------------------------------
+\subsection{Selection}
+
+\label{table:selection}
+\emph{Selection} is the process of selecting the desired rows from
+a given table.  The result of selection is a new table that contains
+only the desired rows.
+
+In \gimli, the following syntax is used to perform selection:
+\begin{center}
+\texpr\verb![! \expr \verb!]!
+\end{center}
+For each row in \texpr, \gimli evaluates the expression \expr in the
+row's context.  If the expression evaluates to \false, \code{NA}, or
+\NULL, the row is skipped; otherwise, the row is included in the new
+table.
+
+\begin{example} Selection.\\
+\begin{tabular}{@{}ll}
+\verb!t[T]!      & select all rows from table $t$ \\
+\verb!t[x<3]!    & select rows from table $t$ where $x<3$  \\
+\verb|t[!is.na(y)]|
+                 & select rows from table $t$ where $y$ is not \na  \\
+\verb|t[x<3 && !is.na(y)]|
+                 & select rows from table $t$ where $x<3$ and $y$ is not \na  \\
+\end{tabular}
+\end{example}
+
+
+
+%------------------------------------------------------------------------------
+\subsection{Projection}
+
+\emph{Projection} is the process of manipulating the columns of a
+table to create a new vector or table.  Simple projections can be used
+to take a subset of a table's columns.  More complex projections can
+be used to merge, delete, and add columns.
+
+\subsubsection{Projection to a vector}
+
+The simplest form of table projection in Gimli is projection to a
+vector, in which a single column of a table is extracted as a vector.
+\begin{center}
+\texpr \verb!$! \emph{colname}\\
+\texpr \verb!$! \emph{colnum}
+\end{center}
+
+\subsubsection{Simple projection to a table}
+
+Projection to a table is used to reshape the column structure of a
+table to result in a new table.  The new table has the same number of
+rows as the original but its columns are determined by a
+\emph{projection specification}, or \pspec for short.  For each row in
+the input table, \gimli evaluates the \pspec to generate a new row,
+which is added to the new table.
+
+The projection-to-table syntax is somewhat complex yet simple for
+common cases:
+
+\begin{center}
+\begin{minipage}{2in}
+\texpr \verb!$(! \pspec \verb!)! \\[1ex] % $
+   where \pspec is one of--- \\
+   \quad \colspec, \ldots \\
+   \quad \verb!-! \colspec, \ldots \quad (subtractive)\\
+   \quad \verb!+! \colspec, \ldots \quad (additive)\\[1ex]
+   where \colspec is one of---\\
+   \quad \emph{colname} \\
+   \quad \emph{colnum} \\
+   \quad \emph{colname}\verb!=!\expr \\
+   \quad \verb!*!
+\end{minipage}
+\end{center}
+
+A \pspec specifies a set of column-generation rules via one
+or more \colspec{}s.  The most general \colspec takes the form
+\emph{colname}\verb!=!\expr and tells Gimli to generate a column named
+\emph{colname} by evaluating \expr for every row in the original table
+and accumulating the results as a column.  All other \colspec forms
+are translated into this form by Gimli before evaluation:
+
+\begin{center}
+\begin{tabular}{ll}
+\emph{colname} & \ra \emph{colname}\verb!=!\emph{colname} \\
+$n$            & \ra \emph{colname}$_n$\verb!=!\emph{colname}$_n$ \\
+\verb!*!       & \ra \emph{colname}$_i$\verb!=!\emph{colname}$_i$ for all columns $i$\\
+\end{tabular}
+\end{center}
+
+
+\begin{example} Simple projections to tables.\\
+\begin{tabular}{@{}ll}
+\verb!t$(1)!      & take the first column of $t$ \\
+\verb!t$(ped.id)! & take the column named ``ped.id'' from $t$ \\
+\verb!t$(ped=ped.id)! & take the column named ``ped.id'' from $t$ and call it ``ped''\\
+\verb!t$(*)! & take all columns from $t$\\
+\end{tabular}
+\end{example}
+
+You can build multi-column projections by providing a comma-separated list
+of \colspec{}s:
+
+\begin{example} Multi-column projections to tables.\\
+\begin{tabular}{@{}ll}
+\verb!t$(1,2,4)!      & take the first, second, and fourth columns \\
+\verb!t$(1,ped.id)!   & take the first column and the column named ``ped.id'' \\
+\end{tabular}
+\end{example}
+
+
+\subsubsection{Subtractive projection}
+
+Like its name implies, subtractive projection is used to
+remove columns from a table.  It works by taking all of the
+columns \emph{except} the ones you specify in your \colspec{}s.
+
+\begin{example} Subtractive projections.\\
+\begin{tabular}{@{}ll}
+\verb!t$(- 1)!      & take all but the first column \\
+\verb!t$(- ped.id)! & take all but the column named ``ped.id' \\
+\verb!t$(- 1,2)!    & take all but the first and second columns \\
+\verb!t$(- ped.id,2)!  & take all but the ``ped.id'' and second columns \\
+\end{tabular}
+\end{example}
+
+
+\subsubsection{Additive projection}
+
+Additive projection generates a new table by taking all of the
+columns from an input table and then adding the ones you specify in
+your \colspec{}s.  If a \colspec defines a column that has the same
+name as one of the input table's columns, the \colspec's column
+will \emph{replace} the input column.  Thus additive projection can
+also be used to ``change'' columns.
+
+\begin{example} Additive projections.\\
+\begin{tabular}{@{}ll}
+\verb!t$(+ x=x+1,y=y+1)!   & add 1 to columns ``x'' and ``y'' \\
+\verb!t$(+ new=x+y)! & create a column ``new'' as the sum of columns ``x'' and ``y''
+\end{tabular}
+\end{example}
+
+
+\subsubsection{Chained table projections}
+
+Any number of table projections can be chained by separating their
+\pspec{}s by semicolons.  The resulting chained projection is exactly
+equivalent to performing each projection in sequence:
+
+\begin{center}
+\texpr\verb!$(! $p_1;$ $p_2;$ $\cdots$ \verb!)! $\equiv$
+\texpr\verb!$(! $p_1$ \verb!)$(! $p_2$  \verb!)! $\cdots$ %$
+\end{center}
+
+\subsubsection{Advanced column specifications}
+
+As you may recall, a \pspec comprises one or more \colspec{}s, each of
+which specifies a column to be generated, added, or subtracted.
+Typically, you specify a column by its name or number, but \gimli
+gives you other options---vectors, strings, or arbitrary expressions.
+Here are the rules \gimli uses to interpret your input as \colspec{}s:
+
+\begin{enumerate}
+
+  \item If the input is a number $n$, \gimli considers it
+    to specify the $n$th column of the input table.
+
+  \item Otherwise, if the input is a variable $x$, \gimli
+    considers it to specify the column named $x$.
+
+  \item Otherwise, if the input is of the form $x=e$, where $x$ is a
+    variable and $e$ is an expression, \gimli considers it to specify
+    a new column named $x$ to be generated by evaluating $e$ over the
+    rows of the input table.
+
+  \item Otherwise, if the input is a star (\verb!*!), \gimli
+    considers it to specify all of the input table's columns.
+
+  \item Otherwise, \gimli considers the input to be an arbitrary
+    expression.  Gimli evaluates the expression to yield a vector, and
+    then interprets each element of the vector as follows:
+
+    \begin{enumerate}
+
+      \item If the element is a number $n$, \gimli considers it to
+        specify the $n$th column of the input table.
+
+      \item Otherwise, if the input is a string value $s$, \gimli
+        considers it to specify the column named $s$.
+
+    \end{enumerate}
+
+\end{enumerate}
+
+
+\begin{example} Advanced column specifications.\\
+\begin{tabular}{@{}ll}
+\verb!t$(1+1)!   & specifies second column \\
+\verb!t$(1,2,3)! & specifies first three columns \\
+\verb!t$(1:3)!   & same as above \\
+\verb!t$(1,[2,3])!   & same as above \\
+\verb!t$(c(1,2,3))!   & same as above \\
+\verb!t$(1+c(0,1,2))!   & same as above \\
+\verb!t$(x)!     & specifies column named ``x'' \\
+\verb!x <- 1;   t$((x))!   & specifies first column \\
+\verb!x <- 1;   t$(x,(x))!   & specifies column ``x'' and first column \\
+\verb!x <- 1;   t$(x,[x])!   & same as above \\
+\verb!x <- "y"; t$((x))!   & specifies column ``y'' \\
+\verb!x <- "y"; t$([1,x])! & specifies first column and column ``y'' \\
+\end{tabular}
+\end{example}
+
+
+
+%------------------------------------------------------------------------------
+\subsection{Joins}
+
+\gimli offers many ways to join two tables $x$ and $y$.  The most
+basic join is the Cartesian product, in which each row in $x$ is
+combined with each row in $y$.  \gimli also supports the more common,
+``natural'' joins, in which each row in $x$ is combined with its
+corresponding row in $y$.
+
+\gimli's join operators are summarized below:
+
+\begin{center}
+\begin{tabular}{ll}
+\hline
+\multicolumn{2}{c}{\textsc{cartesian product}} \\
+\multicolumn{2}{c}{$x$ \code{***} $y$} \\
+\hline
+\multicolumn{2}{c}{\textsc{natural joins}} \\
+Inner               & $x$ \verb!---! $y$ \\
+                    & $x$ \verb!-=-! $y$ \\
+Left outer          & $x$ \verb!==-! $y$ \\
+Right outer         & $x$ \verb!-==! $y$ \\
+Full outer          & $x$ \verb!===! $y$ \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsubsection{Cartesian product}
+
+The Cartesian product is straightforward and joins two tables $x$ and
+$y$ by enumerating every possible combination of rows that can be
+formed by drawing a row from $x$ and combining it with a row drawn from
+$y$.  More formally,
+
+$ x \mbox{\code{***}} y \equiv
+\{ R_x +\!\!\!\!\!+ R_y ~ | ~ R_x \leftarrow \mbox{rows of } x, R_y \leftarrow \mbox{rows of } y \}. $
+
+\noindent
+Note that if $x$ has $M$ rows and $y$ has $N$ rows, $x
+\mbox{\code{***}} y$ will have $N \times M$ rows.
+
+\subsubsection{Natural joins}
+
+Natural joins assume that the tables $x$ and $y$ to be joined are
+related and that their corresponding rows can be ``aligned'' by
+finding common values across the tables in certain key columns.
+\gimli can usually infer the key columns by examining the tables and
+looking for common column names, but you can specify the join criteria
+by adorning the join operator with them, like so:
+
+\begin{center}
+\begin{tabular}{ll}
+\verb!x {n}-=-{m} y! & join using column $n$ from $x$ and column $m$ from $y$ \\
+\verb!x {n}-=- y!    & use column $n$ from both tables \\
+\verb!x -=-{n} y!    & same as above \\
+\verb!x {n,o}-=-{p,q} y! & join on two columns from each table \\
+\verb!x -=- y! & let \gimli figure out the key columns for you
+\end{tabular}
+\end{center}
+
+
+\gimli's natural-join operators differ in how they handle semi-aligned
+tables.  The inner join (\verb!---! or \verb!-=-!) will include only
+those input rows that are perfectly aligned, i.e., have corresponding
+rows in the opposite table.  The left-outer join (\verb!==-!) will
+include all of the left table's rows but only perfectly aligned rows
+from the right table.  Likewise, the right-outer join (\verb!-==!)
+will include all of the right table's rows but only perfectly aligned
+rows from the left table.  Finally, the full-outer join will include
+all rows from both tables, regardless of alignment.
+
+\callout{\na values} When a row from one of the input tables is
+included in the output table but has no corresponding row in the other
+input table, the missing values are filled with \na values.
+
+\callout{Output columns} The result of a join operation is a new table
+whose column structure is determined by the column structure of the
+tables being joined and the join type.  First, \emph{all} of the
+left-hand table's columns will appear as the leftmost columns of the
+output table.  This happens always.  Next, if the join type is
+right-outer or full outer, the key columns of the right-hand table
+will be contributed to the output table; otherwise, they will be
+omitted.  Finally, all of the non-key columns of the right-hand table
+will be contributed to the output table.  If any of the output
+columns' names would be non-unique, \gimli will make them unique by
+appending numeric suffixes. The following table summarizes.
+
+
+\begin{center}
+\begin{tabular}{cccrl}
+Left         & Join             & Right        &       & Output \\
+Columns      & Type             & Columns      &       & Columns \\
+\hline
+\verb!n x!   &      \verb|-=-|  & \verb!n y!   & \ra   & \verb|n x y|   \\
+\verb!n x!   &      \verb|==-|  & \verb!n y!   & \ra   & \verb|n x y|   \\
+\verb!n x!   &      \verb|-==|  & \verb!n y!   & \ra   & \verb|n x n.1 y|   \\
+\verb!n x!   &      \verb|===|  & \verb!n y!   & \ra   & \verb|n x n.1 y|   \\
+\end{tabular}
+\end{center}
+
+
+%------------------------------------------------------------------------------
+\subsubsection{Tricks, tips, and work-arounds}
+
+This section includes handy tips for working with \gimli and working
+around some of its present limitations.
+
+\callout{Full-outer join with merged identifiers}
+Right now, \gimli doesn't provide a full-outer join operator that
+automatically merges the left- and right-hand identifiers contributed
+by its input tables.  However, the following recipe provides a
+manual-merge workaround:
+
+\begin{small}
+\verbatiminput{manual-id-merge.txt}
+\end{small}
+
+
+%==============================================================================
+\clearpage
+\section{Working with functions}
+
+This section describes \gimli's rich support for functions.  In
+\gimli, functions are first-class values: they can be created, stored
+in variables, and passed to other functions.
+
+\tbw
+
+
+%==============================================================================
+\clearpage
+\section{Importing and exporting data}
+
+At present, \gimli's facilities for importing and exporting tabular
+data are limited to three formats:
+
+\begin{itemize}
+
+  \item \callout{Comma separated} Conforming to typical spreadsheet
+    import/export rules: one row per line, each row's values separated
+    by a comma.  Also called CSV format.
+
+  \item \callout{Tab separated} Same as CSV format but
+    uses tabs instead of commas to separate values.  Also
+    called TSV format.
+
+  \item \callout{Whitespace separated} Any number of whitespace
+    characters are used to separate values.  This is the same format
+    as \gimli's native display format.  Also called WSV format.
+
+\end{itemize}
+
+By default, all three forms include a header upon export and expect a
+header upon import.  The WSV export format also includes a row count
+in the left-most column, which R and \gimli ignore on import.
+
+
+\gimli's import/export commands are summarized in the following table:
+
+\begin{center}
+\begin{tabular}{ll}
+Import & Export \\
+\hline
+\var\verb! <- read.csv(!\emph{filename}\verb!)!  & \verb!write.csv(!\texpr, \emph{filename}\verb!)! \\
+\var\verb! <- read.tsv(!\emph{filename}\verb!)!  & \verb!write.tsv(!\texpr, \emph{filename}\verb!)! \\
+\var\verb! <- read.wsv(!\emph{filename}\verb!)!  & \verb!write.wsv(!\texpr, \emph{filename}\verb!)! \\
+\end{tabular}
+\end{center}
+
+The result of a successful import is the table represented by the
+given file.  The result of a successful export is the pathname to
+the exported file.
+
+
+%------------------------------------------------------------------------------
+\subsection{Import options}
+
+All of the \verb!read.!\emph{x} commands accept the following
+options, which may be combined:
+
+\begin{center}
+\begin{tabular}{lll}
+Parameter    & Default value & Description \\
+\hline
+\verb!header!& \true         & Whether the file to be imported has a header \\
+\verb!transpose! & \false    & Whether to transpose the file's cells upon import
+\end{tabular}
+\end{center}
+
+
+\begin{example} Import options.\\
+\begin{tabular}{@{}ll}
+\verb!read.csv("data.csv", h=F)!      & Import ``data.csv'', which does not have a header \\
+\verb!read.csv("data.csv", t=T)!      & Import ``data.csv'', transposing it \\
+\end{tabular}
+\end{example}
+
+
+%------------------------------------------------------------------------------
+\subsection{Export options}
+
+
+All of the \verb!write.!\emph{x} commands accept the \verb!header! option:
+
+\begin{center}
+\begin{tabular}{lll}
+Parameter    & Default value & Description \\
+\hline
+\verb!header!& \true         & Whether to include a header in the output \\
+\end{tabular}
+\end{center}
+
+
+\begin{example} Export options.\\
+\begin{tabular}{@{}ll}
+\verb!read.csv(t, "data.csv", h=F)!   & Export table $t$ as ``data.csv'', no header \\
+\end{tabular}
+\end{example}
+
+
+\noindent\rule[-2ex]{7pt}{7pt}
+\end{document}
