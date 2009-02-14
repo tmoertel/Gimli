@@ -1,6 +1,6 @@
 Name:                gimli
 Homepage:            http://blog.moertel.com/
-Version:             0.013
+Version:             0.0.13
 Stability:           alpha
 License:             GPL
 License-file:        LICENSE
@@ -11,7 +11,7 @@ Category:            Compilers/Interpreters
 Build-type:          Simple
 Build-Depends:       base, mtl >= 1.0, parsec >= 2.0, containers,
                      pretty >= 1.0, directory, array >= 0.1,
-                     regex-compat >= 0.71, unix >= 2.3, readline >= 1.0
+                     regex-compat >= 0.71, unix >= 2.3, editline >= 0.2
 Synopsis:            Genetics Information Manipulation Language, Interactive
 Description:
   The package contains an interpreter and interactive runtime for the

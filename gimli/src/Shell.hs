@@ -1,4 +1,4 @@
-{-# OPTIONS -fglasgow-exts #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 
 module Main (main) where
 
@@ -11,7 +11,7 @@ import Data.Maybe
 import System.Environment (getEnv)
 import Text.ParserCombinators.Parsec.Error
 
-import qualified System.Console.Readline as LE
+import qualified System.Console.Editline.Readline as LE
 import qualified System.Posix.Terminal as Terminal
 
 import qualified Version as Version
@@ -40,7 +40,7 @@ main = do
 initialState term = do
     topLevel <- EV.newTopLevel
     (`execStateT` s0 {stEvalState = topLevel}) . (`runContT` return) $ do
-        userconf <- liftIO $ handle (\_ -> return []) $ do
+        userconf <- liftIO $ handle (\(_::IOException) -> return []) $ do
             home <- getEnv "HOME"
             liftM (:[]) $ readFile (home ++ "/" ++ dotGimli)
         mapM_ eval $ defaults ++ userconf
@@ -180,7 +180,8 @@ trunc limit cut add xs =
 
 -- System commands
 
-handleStd = handle (\e -> return $ "an error occurred: " ++ show e ++ "\n")
+handleStd = handle (\(e :: IOException) ->
+                        return $ "an error occurred: " ++ show e ++ "\n")
 
 sysCommands =
     [ (":quit",    sysQuit)
@@ -229,7 +230,7 @@ getCommand = do
     term <- gets stTerminal
     contCmd <- gets stContinue
     liftIO $
-        handle (\_ -> return Nothing) $
+        handle (\(_ :: IOException) -> return Nothing) $
         if term then prompt (isJust contCmd)
         else getContents >>= return . Just
 

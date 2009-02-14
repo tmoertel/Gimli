@@ -1,10 +1,10 @@
-{-# OPTIONS -fglasgow-exts #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards, FlexibleContexts #-}
 
 module Eval (
     Eval, evaluate
 ) where
 
-import Control.Exception (try)
+import Control.Exception (IOException, try)
 import Control.Monad.Error
 import Data.Array
 import Data.Either
@@ -920,7 +920,7 @@ primWriteX printer nm table file = do
     during nm $ do
         result <- liftIO . try $ writeFile file (printer table)
         case result of
-            Left err -> throwError (show err)
+            Left (err :: IOException) -> throwError (show err)
             Right x  -> return (mkVectorValue [SStr file])
 
 primGlob nm ss = do

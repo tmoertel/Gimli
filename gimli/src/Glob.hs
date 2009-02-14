@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {-
 
 File "globbing."
@@ -33,7 +35,7 @@ glob pat =
 
 search :: MonadIO m => String -> String -> ListT m String
 search d p = do
-    fs <- liftIO $ Ex.handle (const (return [])) $
+    fs <- liftIO $ Ex.handle (\ (_ :: Ex.IOException) -> return []) $
           (sort . mapMaybe (match p)) `liftM` getDirectoryContents d
     ListT . return $ map ((d' ++ "/") ++) fs
       where

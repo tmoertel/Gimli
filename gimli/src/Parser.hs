@@ -1,4 +1,4 @@
-{-# OPTIONS -fglasgow-exts #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Parser (
     gimlParse, gimlReadScalar, gimlParseTable
@@ -50,7 +50,7 @@ exprs :: Parser [Expr]
 exprs = sepEndBy expr semi
 
 expr :: Parser Expr
-expr = 
+expr =
     infixExpr <?> "expression"
 
 sourceExprParser p ctor = do

@@ -1,4 +1,4 @@
-{-# OPTIONS -fglasgow-exts #-}
+{-# LANGUAGE ParallelListComp #-}
 
 module GList (
     GList(..),

@@ -1,4 +1,4 @@
-{-# OPTIONS -fglasgow-exts -fallow-overlapping-instances #-}
+{-# LANGUAGE OverlappingInstances, TypeSynonymInstances #-}
 
 -- Pretty printing support
 

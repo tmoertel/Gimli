@@ -1,5 +1,3 @@
-{-# OPTIONS -fglasgow-exts #-}
-
 module Table (
     Table,
         mkTable, tcols, tvecs,
