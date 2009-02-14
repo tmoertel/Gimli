@@ -8,7 +8,7 @@ import Text.ParserCombinators.Parsec
 
 csvFile   =  csvLine `endBy` newline
 csvLine   =  cell `sepBy` char ','
-cell      =  between hwhite hwhite (quoted <|> (many $ noneOf ", \n"))
+cell      =  between hwhite hwhite (quoted <|> (many $ noneOf ",\n"))
 hwhite    =  many (char ' ')
 quoted    =  do
              left <- char '"' >> manyTill anyChar (char '"')
