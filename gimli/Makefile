@@ -27,7 +27,13 @@ ghc_opts += $(ghc_prof) $(ghc_opt)
 
 # targets
 
-all: $(app_dir)/gimli
+all:
+	@echo This Makefile is a holdback to the pre-Cabal days.
+	@echo The project has since been Cabalized.
+	@echo Invoking the Cabal build system...
+	@echo
+	runhaskell Setup.lhs configure
+	runhaskell Setup.lhs build
 .PHONY: all
 
 $(app_dir)/gimli: $(hsfiles)
@@ -44,7 +50,7 @@ opt:
 
 .PHONY: test sanity recent
 test: all
-	prove test/*.t
+	runhaskell Setup.lhs test
 
 sanity: all
 	prove test/01-sanity.t

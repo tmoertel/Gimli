@@ -1,0 +1,25 @@
+GIMLI ROOT README
+
+Gimli is an interpreter, written in Haskell, for the Genetics
+Information Manipulation Language, a domain-specific language designed
+to make working with genetics-related data sets easier.  The language
+was part of a short-lived research project that, unfortunately, lost
+its funding.  The language and interpreter are both woefully incomplete.
+
+Nevertheless, I decided to put the code on GitHub, on the small chance
+somebody will find something useful in it.  The code has been doing
+nothing for half a decade, so it's out of date by modern Haskell
+standards, and parts of it are in rough shape.  It does build,
+however, on recent releases of GHC (6.12.3 works fine, for example).
+
+I don't expect to work on the project again.  If you find anything
+in it useful, great -- but I can't offer support.
+
+To build the project, see the README in the gimli/ subdirectory.
+
+Sparse user documentation can be found in the user-guide/ directory.
+It's in LaTeX format; run "make" to compile it into PDF format for
+reading.
+
+   -- Tom Moertel <tmoertel@gmail.com>
+      2011-03-26

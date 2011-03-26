@@ -1,6 +1,31 @@
 GIMLI README                                          -*- Outline -*-
 Tom Moertel <tom@moertel.com>
 
+* Notice of abandonment
+
+I haven't worked on this project for half a decade and probably won't
+anytime soon.  I'm making it available primarily for the benefit of
+people who might want to look at the code.  If that's you, great --
+but please don't ask for support.
+
+You can build the Gimli interpreter for GIML (the Genetics Information
+Manipulation Language), and it runs, but it's not very useful because
+the GIML language is incomplete.  (The research project lost its
+funding about one-third into the timeline.)  It has much of its
+intended data-manipulation features, but general-programming features
+are painfully lacking.
+
+
+* License
+
+The code is in this project is licensed under the terms of the GNU
+General Public License, v. 3, with the following exceptions:
+
+  - ExprParser.hs was written by Daan Leijen and is licensed
+    under Parsec's BSD-style license.  A modified version
+    is included in this project.
+
+
 * How to build Gimli
 
 The following sections describe how to build Gimli from source code.
@@ -12,10 +37,10 @@ environment, including the following:
 
   - Glasgow Haskell Compiler, version 6.4 or greater
     http://haskell.org/ghc/
+  - The Cabal build system for Haskell projects (bundled with GHC)
   - Perl, version 5.8 or greater
   - make (GNU preferred)
   - rsync
-  - Readline library
 
 For Mac OS X development, you must also have Apple's XCode installed.
 
@@ -51,7 +76,7 @@ A successful test looks something like this:
 
 To start Gimli, enter the following command from the project root:
 
-    $ app/gimli
+    $ dist/build/gimli/gimli
           _       _ _
      __ _(_)_ __ | (_)    Genetics Information Manipulation Language, ...
     / _` | | '  \| | |    Version 0.004
