@@ -19,7 +19,9 @@ To build the project, see the README in the gimli/ subdirectory.
 
 Sparse user documentation can be found in the user-guide/ directory.
 It's in LaTeX format; run "make" to compile it into PDF format for
-reading.
+reading.  A ready-to-read version can be found here:
+
+https://docs.google.com/viewer?a=v&pid=explorer&chrome=true&srcid=0B2Tqdso8AsFNYzRiMjQxMWUtZDQwNC00ODljLTlhNDItOGRkNDU5NTE3OTJi&hl=en_US
 
    -- Tom Moertel <tmoertel@gmail.com>
       2011-03-26
