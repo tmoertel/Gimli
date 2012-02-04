@@ -6,6 +6,7 @@ module WSV.Parser (wsvFile, wsvLine) where
 
 import Text.ParserCombinators.Parsec
 
+wsvFile :: CharParser st [[String]]
 wsvFile   =  wsvLine `endBy` newline
 wsvLine   =  do
              first <- quoted <|> (many $ noneOf " \t\n")

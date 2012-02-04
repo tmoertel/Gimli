@@ -6,6 +6,7 @@ module CSV.Parser (csvFile, csvLine) where
 
 import Text.ParserCombinators.Parsec
 
+csvFile :: CharParser st [[String]]
 csvFile   =  csvLine `endBy` newline
 csvLine   =  cell `sepBy` char ','
 cell      =  between hwhite hwhite (quoted <|> (many $ noneOf ",\n"))

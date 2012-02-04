@@ -6,6 +6,8 @@ module TSV.Parser (tsvFile, tsvLine) where
 
 import Text.ParserCombinators.Parsec
 
+
+tsvFile :: CharParser st [[String]]
 tsvFile   =  tsvLine `endBy` newline
 tsvLine   =  cell `sepEndBy` tabChar
 cell      =  quoted <|> (many $ noneOf "\t\n")
