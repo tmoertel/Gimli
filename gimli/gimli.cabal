@@ -1,12 +1,12 @@
 Name:                gimli
 Homepage:            http://blog.moertel.com/
-Version:             0.0.13
+Version:             0.0.14
 Stability:           alpha
 License:             GPL
 License-file:        LICENSE
 Author:              Tom Moertel <tom@moertel.com>
 Maintainer:          Tom Moertel <tom@moertel.com>
-Copyright:           2005-2008 Thomas G. Moertel <tom@moertel.com>
+Copyright:           2005-2012 Thomas G. Moertel <tom@moertel.com>
 Category:            Compilers/Interpreters
 Build-type:          Simple
 Synopsis:            Genetics Information Manipulation Language, Interactive
