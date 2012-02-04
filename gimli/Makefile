@@ -32,7 +32,7 @@ all:
 	@echo The project has since been Cabalized.
 	@echo Invoking the Cabal build system...
 	@echo
-	runhaskell Setup.lhs configure
+	runhaskell Setup.lhs configure --enable-tests
 	runhaskell Setup.lhs build
 .PHONY: all
 

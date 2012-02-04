@@ -9,9 +9,6 @@ Maintainer:          Tom Moertel <tom@moertel.com>
 Copyright:           2005-2008 Thomas G. Moertel <tom@moertel.com>
 Category:            Compilers/Interpreters
 Build-type:          Simple
-Build-Depends:       base, mtl >= 1.0, parsec >= 2.0, containers,
-                     pretty >= 1.0, directory, array >= 0.1,
-                     regex-compat >= 0.71, unix >= 2.3, editline >= 0.2
 Synopsis:            Genetics Information Manipulation Language, Interactive
 Description:
   The package contains an interpreter and interactive runtime for the
@@ -62,7 +59,17 @@ extra-source-files:
   test/primitives.t
   test/expr.t
 
-Executable:          gimli
-Main-is:             Shell.hs
-ghc-options:         -O2
-hs-source-dirs:      src
+Executable gimli
+  build-depends:       base, mtl >= 1.0, parsec >= 2.0, containers,
+                       pretty >= 1.0, directory, array >= 0.1,
+                       regex-compat >= 0.71, unix >= 2.3, editline >= 0.2
+  main-is:             Shell.hs
+  ghc-options:         -O2
+  hs-source-dirs:      src
+
+
+
+Test-Suite test-gimli
+  type:       exitcode-stdio-1.0
+  main-is:    test-gimli.hs
+  build-depends: base, process
