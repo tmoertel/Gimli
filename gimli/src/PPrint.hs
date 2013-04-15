@@ -1,4 +1,4 @@
-{-# LANGUAGE OverlappingInstances, TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances, TypeSynonymInstances #-}
 
 -- Pretty printing support
 

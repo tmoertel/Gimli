@@ -42,6 +42,13 @@ environment, including the following:
   - make (GNU preferred)
   - rsync
 
+On Fedora Linux, you should make sure that the following packages
+are installed:
+
+  - haskell-platform
+  - ghc-editline-devel
+  - perl-Test-Base
+
 For Mac OS X development, you must also have Apple's XCode installed.
 
 ** Building
