@@ -92,13 +92,13 @@ parensExpr =
     liftM EParens (parens expr)
 
 tableExpr =
-    reserved "table" >> parens (commaSepEnd1 tspec) >>= return . ETable
+    reserved "table" >> liftM ETable (parens (commaSepEnd1 tspec))
 
-tspec = do
-    (liftM TCol anypair) <|> (liftM TSplice expr)
+tspec =
+    liftM TCol anypair <|> liftM TSplice expr
 
 listExpr =
-    reserved "list" >> parens (commaSepEnd givenArg) >>= return . EList
+    reserved "list" >> liftM EList (parens (commaSepEnd givenArg))
 
 localExpr =
     reserved "local" >> liftM ELocal blockOrExpr
@@ -109,7 +109,7 @@ functionExpr = do
     body <- blockOrExpr
     return $ EFunc args body
 
-formalArgs = do
+formalArgs =
     liftM mkArgList . commaSepEnd $ do
         name <- identifier
         defaultExpr <- option Nothing $ do
@@ -137,13 +137,13 @@ nullExpr = do
     reserved "NULL" <|> try (brackets $ return ())
     return (EVal VNull)
 
-vectorExpr = do
-        (scalarLiteralExpr >>= return . EVal . VVector . toVector)
-    <|> (bracketVectorExpr >>= return . EVector)
+vectorExpr =
+        liftM (EVal . VVector . toVector) scalarLiteralExpr
+    <|> liftM EVector bracketVectorExpr
     <?> "vector"
 
 bracketVectorExpr =
-        (brackets (commaSepEnd1 expr))
+        brackets (commaSepEnd1 expr)
     <|> try (symbol "c" >> parens (commaSepEnd1 expr))
     <?> "vector constructor"
 
@@ -155,23 +155,27 @@ ifThenElseExpr = do
     trueExpr <- blockOrExpr
     maybeFalseExpr <- option Nothing $ do
         reserved "else"
-        blockOrExpr >>= return . Just
+        liftM Just blockOrExpr
     return (kind test trueExpr maybeFalseExpr)
 
 forExpr = do
-    reserved "for"
-    var <- identifier
-    symbol "in"
+    var <- forIntro
     collection <- expr
     prog <- blockExpr
     return $ EFor var collection prog
+
+forIntro = do
+    reserved "for"
+    var <- identifier
+    symbol "in"
+    return var
 
 blockOrExpr =
         blockExpr
     <|> expr
 
 blockExpr =
-    (`sourceExprParser` Expr) $ do
+    (`sourceExprParser` Expr) $
         between (reserved "do") (reserved "end") blockContents
     <|> between (symbol "{") (symbol "}") blockContents
   where
@@ -184,9 +188,9 @@ scalarLiteralExpr =
     <|> naLiteralExpr
     <?> "scalar literal"
 
-numberLiteralExpr = lexNumber >>= return . SNum
-stringLiteralExpr = lexString >>= return . SStr
-boolLiteralExpr   = lexBool   >>= return . SLog
+numberLiteralExpr = liftM SNum lexNumber
+stringLiteralExpr = liftM SStr lexString
+boolLiteralExpr   = liftM SLog lexBool
 naLiteralExpr     = reserved "NA" >> return SNa
 
 
@@ -202,13 +206,13 @@ envpair = do
     val  <- expr
     return $ ENVP name val
 
-anypair = do
+anypair =
     try nvpair <|> try envpair
 
-givenArg = (<?> "function argument") $ do
+givenArg = (<?> "function argument") $
     (try nvpair >>= \(NVP n e) -> return (GivenArg (Just n) e))
     <|>
-    (liftM (GivenArg Nothing) expr)
+    liftM (GivenArg Nothing) expr
 
 opTable =
     [ [ sfop "("  EApp (commaSepEnd givenArg `followedBy` symbol ")")
@@ -299,9 +303,7 @@ opTable =
                     eret (ctor l r)
         bexprs    = option [] (braces (commaSepEnd expr))
     infixFor      = (`Infix` AssocLeft) $ do
-                        reserved "for"
-                        var <- identifier
-                        symbol "in"
+                        var <- forIntro
                         eret $ flip (EFor var)
     eret f        = return (ef f)
     eret1 f       = return (ef1 f)
@@ -321,8 +323,8 @@ pspecTableSimple = do
     return $ \te -> Expr (EProject te f) l r
 
 pspecVector =
-        (integer >>= return . PSVectorNum . fromInteger)
-    <|> (identifier >>= return . PSVectorName)
+        liftM (PSVectorNum . fromInteger) integer
+    <|> liftM PSVectorName identifier
 
 pspecTableSeries = parens $ do
     psts <- semiSep1 (sEP pspecTable)
@@ -333,11 +335,11 @@ pspecTable =
 
 pspecTableAdditiveOverlay = do
     symbol "+"
-    commaSepEnd1 anypair >>= return . flip EProject . PSTableOverlay
+    liftM (flip EProject . PSTableOverlay) (commaSepEnd1 anypair)
 
 pspecTableStraight = do
     negated <- option False (symbol "-" >> return True)
-    commaSepEnd1 pspecElem >>= return . flip EProject . PSTable negated
+    liftM (flip EProject . PSTable negated) (commaSepEnd1 pspecElem)
 
 pspecElem =
         try (do i <- integer
@@ -348,7 +350,7 @@ pspecElem =
                 notFollowedBy (noneOf ",;)")
                 return $ PSCName s)
     <|> (reservedOp "*" >> return PSCStar)
-    <|> (expr >>= return . PSCExpr)
+    <|> liftM PSCExpr expr
 
 pspecNameEqualsExpr =
     liftM PSCNExpr anypair
