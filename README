@@ -21,7 +21,7 @@ Sparse user documentation can be found in the user-guide/ directory.
 It's in LaTeX format; run "make" to compile it into PDF format for
 reading.  A ready-to-read version can be found here:
 
-https://docs.google.com/viewer?a=v&pid=explorer&chrome=true&srcid=0B2Tqdso8AsFNYzRiMjQxMWUtZDQwNC00ODljLTlhNDItOGRkNDU5NTE3OTJi&hl=en_US
+https://github.com/tmoertel/Gimli/blob/master/user-guide/gimli-user-guide.pdf
 
    -- Tom Moertel <tmoertel@gmail.com>
       2011-03-26
